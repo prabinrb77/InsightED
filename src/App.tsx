@@ -3,6 +3,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
 import Placeholder from "./pages/Placeholder";
 
 /**
@@ -16,7 +17,6 @@ const STUBS: { path: string; title: string; node?: string }[] = [
   { path: "/pricing", title: "Pricing", node: "264:3156" },
   { path: "/resources", title: "Resources", node: "264:4241" },
   { path: "/about", title: "About", node: "260:3600" },
-  { path: "/signup", title: "Create your account", node: "186:1103" },
 ];
 
 export default function App() {
@@ -33,6 +33,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
           {STUBS.map((s) => (
             <Route
               key={s.path}
