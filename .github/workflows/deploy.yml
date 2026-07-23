@@ -20,6 +20,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+        with:
+          # Auto-enable GitHub Pages on first run so the deploy doesn't
+          # require flipping Settings -> Pages manually
+          enablement: true
       - uses: actions/setup-node@v4
         with:
           node-version: 20
