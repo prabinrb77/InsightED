@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import LandingPage from "./pages/LandingPage";
+import LoginPage from "./pages/LoginPage";
 import Placeholder from "./pages/Placeholder";
 
 /**
@@ -15,7 +16,6 @@ const STUBS: { path: string; title: string; node?: string }[] = [
   { path: "/pricing", title: "Pricing", node: "264:3156" },
   { path: "/resources", title: "Resources", node: "264:4241" },
   { path: "/about", title: "About", node: "260:3600" },
-  { path: "/login", title: "Log in", node: "1:198" },
   { path: "/signup", title: "Create your account", node: "186:1103" },
 ];
 
@@ -32,6 +32,7 @@ export default function App() {
       <main id="main" className="flex-1">
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
           {STUBS.map((s) => (
             <Route
               key={s.path}
