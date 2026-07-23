@@ -32,6 +32,11 @@ jobs:
       - run: npm run build
         env:
           GITHUB_PAGES: "true"
+          # Supabase project keys — set under repo Settings -> Secrets and
+          # variables -> Actions. The anon key is safe to expose in the
+          # built site; row-level security is what protects the data.
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
       # GitHub Pages has no SPA fallback; serving index.html as the 404
       # page lets deep links like /InsightED/pricing load the app
       - run: cp dist/index.html dist/404.html

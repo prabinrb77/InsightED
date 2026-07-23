@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
+import useSession from "../hooks/useSession";
+import { supabase } from "../lib/supabase";
 
 /** Figma: node 264:1826 "Header" */
 
@@ -14,6 +16,7 @@ const NAV = [
 
 export default function Header() {
   const [open, setOpen] = useState(false);
+  const session = useSession();
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-white">
@@ -45,18 +48,38 @@ export default function Header() {
         </nav>
 
         <div className="ml-auto flex items-center gap-4 lg:ml-0">
-          <Link
-            to="/login"
-            className="hidden text-base font-semibold leading-6 text-brand sm:inline-block"
-          >
-            Login
-          </Link>
-          <Link
-            to="/signup"
-            className="flex h-12 items-center justify-center rounded-lg bg-brand px-6 text-base font-semibold text-white shadow-btn transition-colors hover:bg-[#255d99]"
-          >
-            Get Started
-          </Link>
+          {session ? (
+            <>
+              <span
+                className="hidden max-w-[200px] truncate text-sm leading-6 text-muted sm:inline-block"
+                title={session.user.email}
+              >
+                {session.user.email}
+              </span>
+              <button
+                type="button"
+                onClick={() => supabase?.auth.signOut()}
+                className="flex h-12 items-center justify-center rounded-lg border border-line px-6 text-base font-semibold text-ink transition-colors hover:bg-line-soft"
+              >
+                Log out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                className="hidden text-base font-semibold leading-6 text-brand sm:inline-block"
+              >
+                Login
+              </Link>
+              <Link
+                to="/signup"
+                className="flex h-12 items-center justify-center rounded-lg bg-brand px-6 text-base font-semibold text-white shadow-btn transition-colors hover:bg-[#255d99]"
+              >
+                Get Started
+              </Link>
+            </>
+          )}
 
           <button
             type="button"

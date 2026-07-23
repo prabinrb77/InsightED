@@ -1,6 +1,11 @@
 import { FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
 import SocialAuthButtons from "../components/SocialAuthButtons";
+import {
+  supabase,
+  authRedirectUrl,
+  NOT_CONFIGURED_NOTICE,
+} from "../lib/supabase";
 
 /** Figma: node 186:1103 "Create your account" */
 
@@ -10,18 +15,60 @@ const ROLES = [
   { value: "specialist", label: "Specialist" },
 ];
 
+type Notice = { kind: "info" | "error" | "success"; text: string };
+
 export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("school");
   const [showPassword, setShowPassword] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<Notice | null>(null);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    // No auth backend yet — surface a friendly notice instead of failing silently.
-    setSubmitted(true);
+    if (!supabase) {
+      setNotice({ kind: "info", text: NOT_CONFIGURED_NOTICE });
+      return;
+    }
+    setBusy(true);
+    setNotice(null);
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        // Stored on the user's profile (auth.users.raw_user_meta_data)
+        data: { full_name: name, role },
+        emailRedirectTo: authRedirectUrl(),
+      },
+    });
+    setBusy(false);
+    if (error) {
+      setNotice({ kind: "error", text: error.message });
+    } else {
+      setNotice({
+        kind: "success",
+        text: `Almost there — we've sent a confirmation link to ${email}. Click it to activate your account.`,
+      });
+    }
+  }
+
+  async function handleProvider(provider: "google" | "microsoft") {
+    if (!supabase) {
+      setNotice({ kind: "info", text: NOT_CONFIGURED_NOTICE });
+      return;
+    }
+    setNotice(null);
+    const { error } = await supabase.auth.signInWithOAuth({
+      // Supabase's name for Microsoft sign-in is "azure"
+      provider: provider === "microsoft" ? "azure" : "google",
+      options: {
+        redirectTo: authRedirectUrl(),
+        ...(provider === "microsoft" ? { scopes: "email" } : {}),
+      },
+    });
+    if (error) setNotice({ kind: "error", text: error.message });
   }
 
   return (
@@ -140,24 +187,28 @@ export default function SignupPage() {
             </div>
           </div>
 
-          {submitted && (
+          {notice && (
             <p
-              role="status"
-              className="rounded-lg border border-teal-border bg-teal-tint px-4 py-3 text-sm leading-5 text-teal"
+              role={notice.kind === "error" ? "alert" : "status"}
+              className={
+                notice.kind === "error"
+                  ? "rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm leading-5 text-red-700"
+                  : "rounded-lg border border-teal-border bg-teal-tint px-4 py-3 text-sm leading-5 text-teal"
+              }
             >
-              Accounts aren't open yet — sign-ups will open once the InsightED
-              app launches.
+              {notice.text}
             </p>
           )}
 
           <button
             type="submit"
-            className="flex h-12 items-center justify-center rounded-lg bg-brand text-base font-semibold text-white shadow-btn transition-colors hover:bg-[#255d99]"
+            disabled={busy}
+            className="flex h-12 items-center justify-center rounded-lg bg-brand text-base font-semibold text-white shadow-btn transition-colors hover:bg-[#255d99] disabled:opacity-60"
           >
-            Create account
+            {busy ? "Creating account…" : "Create account"}
           </button>
 
-          <SocialAuthButtons onSelect={() => setSubmitted(true)} />
+          <SocialAuthButtons onSelect={handleProvider} />
 
           <p className="text-center text-[13px] leading-5 text-muted">
             By creating an account you agree to our{" "}

@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
+import { supabase, authRedirectUrl } from "../lib/supabase";
 
 /**
  * Password reset request page, linked from the login form. Standard flow:
@@ -10,10 +11,19 @@ import { Link } from "react-router-dom";
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    // No auth backend yet — this will call the "send reset email" API later.
+    if (supabase) {
+      setBusy(true);
+      // Ignore errors on purpose: showing them would reveal which emails
+      // have accounts. The confirmation copy is already conditional.
+      await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: authRedirectUrl("reset-password"),
+      });
+      setBusy(false);
+    }
     setSent(true);
   }
 
@@ -84,9 +94,10 @@ export default function ForgotPasswordPage() {
 
             <button
               type="submit"
-              className="flex h-12 items-center justify-center rounded-lg bg-brand text-base font-semibold text-white shadow-btn transition-colors hover:bg-[#255d99]"
+              disabled={busy}
+              className="flex h-12 items-center justify-center rounded-lg bg-brand text-base font-semibold text-white shadow-btn transition-colors hover:bg-[#255d99] disabled:opacity-60"
             >
-              Send reset link
+              {busy ? "Sending…" : "Send reset link"}
             </button>
           </form>
         )}
