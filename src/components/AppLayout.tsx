@@ -102,9 +102,33 @@ export default function AppLayout() {
           </div>
         </header>
 
-        <main id="appmain" className="flex-1">
+        <main id="appmain" className="flex-1 pb-16 md:pb-0">
           <Outlet />
         </main>
+
+        {/* The Figma app frames are desktop-only; this keeps the app
+            navigable on phones where the rail is hidden. */}
+        <nav
+          aria-label="Educator (mobile)"
+          className="fixed inset-x-0 bottom-0 z-50 flex border-t border-line bg-white md:hidden"
+        >
+          {NAV.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) =>
+                [
+                  "flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px]",
+                  isActive ? "font-semibold text-brand" : "text-muted",
+                ].join(" ")
+              }
+            >
+              <item.icon />
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
       </div>
     </div>
   );

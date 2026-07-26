@@ -114,7 +114,9 @@ export default function TeacherSignupPage() {
   async function handleCreateAccount(e: FormEvent) {
     e.preventDefault();
     if (!supabase) {
-      setError(NOT_CONFIGURED_NOTICE);
+      // Demo mode: no Supabase keys, so skip account creation and show the
+      // completed state anyway rather than dead-ending the walkthrough.
+      goto(5);
       return;
     }
     setBusy(true);
@@ -541,8 +543,11 @@ export default function TeacherSignupPage() {
             </p>
           </div>
 
+          {/* Professional Verification isn't built yet, so both routes drop
+              the new educator into the app. */}
           <button
             type="button"
+            onClick={() => navigate("/app")}
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg bg-brand py-4 text-base font-bold text-white shadow-btn transition-colors hover:bg-[#255d99]"
           >
             Complete Professional Verification Now <span aria-hidden>→</span>
@@ -550,7 +555,7 @@ export default function TeacherSignupPage() {
 
           <button
             type="button"
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/app")}
             className="pt-4 text-sm font-semibold text-brand hover:underline"
           >
             Save and continue later

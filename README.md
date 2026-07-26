@@ -30,6 +30,32 @@ npm run build    # type-check + production build
 | Header (marketing) | ✅ Built | `264:1826` |
 | Footer (marketing) | ✅ Built | `316:3267` |
 
+### Educator app (`/app`)
+
+Finishing the teacher wizard lands here. All routes render inside `AppLayout`
+(dark rail + search/profile bar).
+
+| Route | Status | Figma node |
+| --- | --- | --- |
+| `/app` | ✅ Classroom Overview — stat cards, trend sparklines | `1:495` |
+| `/app/students` | ✅ Student Directory table | `1:1370` |
+| `/app/students/new` | ✅ Add a new student | `301:2163` |
+| `/app/students/:id` | ✅ Student profile — timeline, notes, attendance gauge | `1:1006` |
+| `/app/messages` | ✅ Secure Communication | `1:1797` |
+| `/app/schedule` | ✅ Today's Agenda | `1:1478` |
+| `/app/settings` | ⚠️ Own design — **no educator settings frame in Figma** | — |
+
+Notes on the app screens:
+
+- **Not wired to data.** The roster lives in `src/data/students.ts`, taken from
+  the frames. Nothing persists — "Save Student", "Quick Log" and sending a
+  message are inert.
+- **Avatars are initials, not photos** (`components/Avatar.tsx`). The frames use
+  portraits of people who don't exist; swap for real `<img>` once profile
+  photos come from the backend.
+- **A mobile tab bar was added.** The app frames are desktop-only (1440px) and
+  the rail hides under `md`, which would leave phones unnavigable.
+
 Auth routes render inside `AuthLayout` (slim portal chrome), not the marketing
 `SiteLayout` — that's how the Figma auth frames are designed.
 
@@ -42,9 +68,18 @@ wired up, so entering any 6 digits advances the wizard. The account is really
 created by the Supabase `signUp` call on the final step. Before launch, either
 swap these for Supabase OTP (`signInWithOtp`) or drop the two steps.
 
+Finishing the wizard drops the new educator at `/app` — Professional
+Verification isn't built, so both buttons on the account-created screen go
+there. Without Supabase keys, step 4 skips account creation and shows the
+completed state anyway so the walkthrough doesn't dead-end.
+
 ### ⚠️ Figma frames that are mislabelled
 
-The auth area of the file has several traps — check content, not layer names:
+Several frames have layer names that don't match their content — check the
+content, not the name:
+
+- `301:2163` is named **"Student Roster Table"** but contains the **Add a new
+  student** form. The real roster is `1:1370`.
 
 - `326:5898` / `326:6004` / `326:6053` are named **"P-019/020/021 Teacher
   Signup"** but contain the **Specialist** flow (duplicated without renaming).

@@ -14,6 +14,14 @@ import TeacherSignupPage from "./pages/TeacherSignupPage";
 import SpecialistSignupPage from "./pages/SpecialistSignupPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import AppLayout from "./components/AppLayout";
+import DashboardPage from "./pages/app/DashboardPage";
+import StudentsPage from "./pages/app/StudentsPage";
+import AddStudentPage from "./pages/app/AddStudentPage";
+import StudentProfilePage from "./pages/app/StudentProfilePage";
+import MessagesPage from "./pages/app/MessagesPage";
+import SchedulePage from "./pages/app/SchedulePage";
+import AppSettingsPage from "./pages/app/AppSettingsPage";
 import Placeholder from "./pages/Placeholder";
 
 export default function App() {
@@ -27,6 +35,17 @@ export default function App() {
       <Route path="/signup/:role" element={<SignupFormPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+      {/* Educator app — dark rail shell */}
+      <Route path="/app" element={<AppLayout />}>
+        <Route index element={<DashboardPage />} />
+        <Route path="students" element={<StudentsPage />} />
+        <Route path="students/new" element={<AddStudentPage />} />
+        <Route path="students/:id" element={<StudentProfilePage />} />
+        <Route path="messages" element={<MessagesPage />} />
+        <Route path="schedule" element={<SchedulePage />} />
+        <Route path="settings" element={<AppSettingsPage />} />
+      </Route>
 
       {/* Marketing site */}
       <Route element={<SiteLayout />}>
