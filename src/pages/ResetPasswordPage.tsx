@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import AuthLayout from "../components/AuthLayout";
 import { supabase } from "../lib/supabase";
 
 /**
@@ -38,7 +39,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <section className="flex min-h-[70vh] items-center justify-center bg-page px-6 py-16 md:py-24">
+    <AuthLayout>
       <div className="w-full max-w-[440px]">
         <div className="flex flex-col gap-2 pb-8 text-center">
           <span className="mx-auto w-fit rounded-full border border-teal-border bg-teal-tint px-3 py-1 text-[11px] font-bold uppercase tracking-[0.55px] text-brand">
@@ -114,6 +115,6 @@ export default function ResetPasswordPage() {
           </Link>
         </p>
       </div>
-    </section>
+    </AuthLayout>
   );
 }

@@ -37,7 +37,7 @@ export default function SocialAuthButtons({
   );
 }
 
-function GoogleLogo() {
+export function GoogleLogo() {
   return (
     <svg aria-hidden viewBox="0 0 24 24" className="h-5 w-5 shrink-0">
       <path
@@ -60,7 +60,7 @@ function GoogleLogo() {
   );
 }
 
-function MicrosoftLogo() {
+export function MicrosoftLogo() {
   return (
     <svg aria-hidden viewBox="0 0 24 24" className="h-5 w-5 shrink-0">
       <path fill="#F25022" d="M1 1h10.5v10.5H1z" />

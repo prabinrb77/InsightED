@@ -15,9 +15,25 @@ npm run build    # type-check + production build
 | Route | Status | Figma node |
 | --- | --- | --- |
 | `/` | ✅ Built — hero, feature band, CTA | `1:4` |
-| Header (all pages) | ✅ Built | `264:1826` |
-| Footer (all pages) | ✅ Built | `316:3267` |
-| `/for-schools` … `/signup` | Stubbed, node IDs wired | see `src/App.tsx` |
+| `/for-schools` | ✅ Built — hero, trust bar, benefits, pricing, pilot form | `264:1861` |
+| `/for-parents` | ✅ Built — hero, plans, support cards, privacy, FAQ | `264:2389` |
+| `/for-specialists` | ✅ Built — hero, roles, engagement, criteria, application | `264:2747` |
+| `/pricing` | ✅ Built — audience toggle, tiers, comparison table, FAQ | `264:3156` |
+| `/resources` | ✅ Built — search, filters, card grid, pagination | `264:4241` |
+| `/about` | ✅ Built — mission, values, team, advisors, awards | `260:3600` |
+| `/login` | ✅ Built — "Welcome Back" card, Supabase auth wired | `1:198` |
+| `/signup` | ✅ Built — choose-path role selector | `186:1103` |
+| `/signup/:role` | ⚠️ Interim — real Supabase sign-up, **not** the Figma multi-step flow | — |
+| `/forgot-password`, `/reset-password` | ⚠️ Built on Supabase auth, no Figma frame found | — |
+| Header (marketing) | ✅ Built | `264:1826` |
+| Footer (marketing) | ✅ Built | `316:3267` |
+
+Auth routes render inside `AuthLayout` (slim portal chrome), not the marketing
+`SiteLayout` — that's how the Figma auth frames are designed.
+
+**Still to build from Figma:** the role-specific sign-up steps (teacher steps 1–4,
+parent steps 2–4, specialist activation). `/signup/:role` currently short-circuits
+those with a single email/password form so sign-up works end to end.
 
 ## Conventions
 
@@ -25,20 +41,28 @@ npm run build    # type-check + production build
 - **The Figma export is absolutely positioned at 1440px.** It's been converted to flow layout with `max-w-shell` (1280px) containers, so the pages are responsive down to mobile. Desktop rendering matches the frames.
 - **Skip link, visible focus rings, and `prefers-reduced-motion` are in `src/index.css`** — not in the design, but required to ship.
 
-## ⚠️ Assets expire in ~7 days
+## Assets
 
-Every image and icon in `src/assets/figmaAssets.ts` points at a temporary Figma URL. Figma's CDN is firewalled from this environment so I couldn't download them. Before you commit or deploy:
+Icons and images for the six marketing pages are **downloaded and committed**:
 
-1. Open each URL in your browser and save the file into `src/assets/`.
+- `src/assets/icons/` — SVG icons exported from Figma
+- `src/assets/resources/` — Resources covers + author avatars (resized to 800px / 96px, JPEG)
+- `src/assets/about/` — mission illustration, team and advisor photos, award marks
+
+### ⚠️ The landing page still uses expiring URLs
+
+`src/assets/figmaAssets.ts` points at temporary Figma URLs that expire roughly 7
+days after export. Those links now download fine, so before deploying:
+
+1. Save each URL into `src/assets/`.
 2. Swap the constant to a local import — `import heroIllustration from "./hero-ecosystem.png";`
 
 Every component imports from that one file, so nothing else changes.
 
 ## Remaining screens in the Figma file
 
-Around 100 frames total. Grouped roughly:
+Around 100 frames total. The 6 marketing pages are now built; what's left:
 
-- **Marketing (6):** For Schools, For Parents, For Specialists, Pricing (+ Parents view), Resources, About
 - **Auth & onboarding (~20):** Login, 2FA, account recovery, role selector, teacher signup steps 1–4, parent signup steps 2–4, professional activation, link-your-children, account-created states
 - **Educator app (~10):** Classroom overview, student profile, student roster, daily schedule, messages hub, behaviour logging modal, strategy coach, settings
 - **Parent app (~12):** Home dashboard, progress highlights, observations, messages, goals & IEP, collab & finance, 5 settings screens

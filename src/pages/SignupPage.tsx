@@ -1,238 +1,121 @@
-import { FormEvent, useState } from "react";
 import { Link } from "react-router-dom";
-import SocialAuthButtons from "../components/SocialAuthButtons";
-import {
-  supabase,
-  authRedirectUrl,
-  NOT_CONFIGURED_NOTICE,
-} from "../lib/supabase";
+import AuthLayout from "../components/AuthLayout";
+import iconCap from "../assets/icons/auth-graduation-cap.svg";
+import iconTeacher from "../assets/icons/auth-role-teacher.svg";
+import iconParent from "../assets/icons/auth-role-parent.svg";
+import iconSpecialist from "../assets/icons/auth-role-specialist.png";
+import arrowRight from "../assets/icons/auth-arrow-right.svg";
+import arrowSales from "../assets/icons/auth-arrow-sales.svg";
 
-/** Figma: node 186:1103 "Create your account" */
+/** Figma: node 186:1103 "P-018 Sign Up — Choose Path" */
 
-const ROLES = [
-  { value: "school", label: "School" },
-  { value: "parent", label: "Parent" },
-  { value: "specialist", label: "Specialist" },
+const PATHS = [
+  {
+    icon: iconTeacher,
+    role: "Teacher",
+    body: "Sign up to join your school's InsightED account. You'll need your school's invite code or to select your school from a list.",
+    to: "/signup/teacher",
+  },
+  {
+    icon: iconParent,
+    role: "Parent",
+    body: "Sign up to support your child. You can join your child's school if they're already on InsightED, or start independently.",
+    to: "/signup/parent",
+  },
+  {
+    icon: iconSpecialist,
+    role: "Specialist",
+    body: "Sign up to support your students and families. You can join an existing school on InsightED, or manage your specialist practice independently.",
+    to: "/signup/specialist",
+  },
 ];
 
-type Notice = { kind: "info" | "error" | "success"; text: string };
-
 export default function SignupPage() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState("school");
-  const [showPassword, setShowPassword] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<Notice | null>(null);
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    if (!supabase) {
-      setNotice({ kind: "info", text: NOT_CONFIGURED_NOTICE });
-      return;
-    }
-    setBusy(true);
-    setNotice(null);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        // Stored on the user's profile (auth.users.raw_user_meta_data)
-        data: { full_name: name, role },
-        emailRedirectTo: authRedirectUrl(),
-      },
-    });
-    setBusy(false);
-    if (error) {
-      setNotice({ kind: "error", text: error.message });
-    } else {
-      setNotice({
-        kind: "success",
-        text: `Almost there — we've sent a confirmation link to ${email}. Click it to activate your account.`,
-      });
-    }
-  }
-
-  async function handleProvider(provider: "google" | "microsoft") {
-    if (!supabase) {
-      setNotice({ kind: "info", text: NOT_CONFIGURED_NOTICE });
-      return;
-    }
-    setNotice(null);
-    const { error } = await supabase.auth.signInWithOAuth({
-      // Supabase's name for Microsoft sign-in is "azure"
-      provider: provider === "microsoft" ? "azure" : "google",
-      options: {
-        redirectTo: authRedirectUrl(),
-        ...(provider === "microsoft" ? { scopes: "email" } : {}),
-      },
-    });
-    if (error) setNotice({ kind: "error", text: error.message });
-  }
-
   return (
-    <section className="flex min-h-[70vh] items-center justify-center bg-page px-6 py-16 md:py-24">
-      <div className="w-full max-w-[440px]">
-        <div className="flex flex-col gap-2 pb-8 text-center">
-          <span className="mx-auto w-fit rounded-full border border-teal-border bg-teal-tint px-3 py-1 text-[11px] font-bold uppercase tracking-[0.55px] text-brand">
-            Get started
+    <AuthLayout variant="portal">
+      <div className="w-full max-w-[1002px] rounded-xl border border-authline bg-white px-6 py-12 drop-shadow-[0px_1px_1px_rgba(0,0,0,0.05)]">
+        <div className="flex justify-center">
+          <span className="flex size-12 items-center justify-center rounded-xl bg-brand">
+            <span className="h-6 w-[30px] overflow-clip">
+              <img src={iconCap} alt="" aria-hidden className="size-full" />
+            </span>
           </span>
-          <h1 className="text-[32px] font-bold leading-[1.15] tracking-[-1px] text-ink">
-            Create your account
+        </div>
+
+        <div className="flex flex-col gap-2 pt-6 text-center">
+          <h1 className="text-2xl font-bold leading-8 tracking-[-0.07px] text-[#0F172A]">
+            Welcome to InsightED
           </h1>
-          <p className="text-base leading-6 text-body">
-            Join the ecosystem supporting every learner.
+          <p className="text-sm leading-5 text-authslate">
+            Tell us how you'll be using InsightED
           </p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-5 rounded-card border border-line-soft bg-white p-8 shadow-card"
-        >
-          <fieldset className="flex flex-col gap-1.5">
-            <legend className="pb-1.5 text-sm font-semibold leading-5 text-ink">
-              I am a…
-            </legend>
-            <div className="grid grid-cols-3 gap-2" role="radiogroup">
-              {ROLES.map((r) => (
-                <label
-                  key={r.value}
-                  className={[
-                    "flex h-11 cursor-pointer items-center justify-center rounded-lg border px-2 text-center text-[13px] font-semibold leading-4 transition-colors",
-                    role === r.value
-                      ? "border-brand bg-brand-tint text-brand"
-                      : "border-line text-body hover:bg-line-soft",
-                  ].join(" ")}
-                >
-                  <input
-                    type="radio"
-                    name="role"
-                    value={r.value}
-                    checked={role === r.value}
-                    onChange={() => setRole(r.value)}
-                    className="sr-only"
-                  />
-                  {r.label}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="name"
-              className="text-sm font-semibold leading-5 text-ink"
+        <div className="grid gap-3 pt-6 md:grid-cols-3">
+          {PATHS.map((p) => (
+            <article
+              key={p.role}
+              className="flex flex-col items-center rounded-xl border border-authline bg-white p-6 transition-colors hover:border-brand"
             >
-              Full name
-            </label>
-            <input
-              id="name"
-              type="text"
-              autoComplete="name"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Your name"
-              className="h-12 rounded-lg border border-line px-4 text-base text-ink placeholder:text-footext focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
-            />
-          </div>
+              <span className="flex size-16 items-center justify-center rounded-full bg-authchip">
+                <span className="h-6 w-[30px] overflow-clip">
+                  <img src={p.icon} alt="" aria-hidden className="size-full object-contain" />
+                </span>
+              </span>
 
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="email"
-              className="text-sm font-semibold leading-5 text-ink"
-            >
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@school.edu.au"
-              className="h-12 rounded-lg border border-line px-4 text-base text-ink placeholder:text-footext focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
-            />
-          </div>
+              <h2 className="pt-4 text-lg font-semibold leading-7 text-[#0F172A]">
+                {p.role}
+              </h2>
 
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="password"
-              className="text-sm font-semibold leading-5 text-ink"
-            >
-              Password
-            </label>
-            <div className="relative">
-              <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                autoComplete="new-password"
-                required
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 8 characters"
-                className="h-12 w-full rounded-lg border border-line px-4 pr-16 text-base text-ink placeholder:text-footext focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute inset-y-0 right-0 px-4 text-sm font-medium text-muted hover:text-ink"
-                aria-pressed={showPassword}
+              <p className="flex-1 pt-2 text-center text-xs leading-[19.5px] text-authslate">
+                {p.body}
+              </p>
+
+              <Link
+                to={p.to}
+                className="flex items-center gap-1 pt-4 text-sm font-semibold leading-5 text-brand hover:underline"
               >
-                {showPassword ? "Hide" : "Show"}
-              </button>
-            </div>
-          </div>
+                Continue
+                <span className="h-3.5 w-[12.25px] overflow-clip">
+                  <img
+                    src={arrowRight}
+                    alt=""
+                    aria-hidden
+                    className="size-full"
+                  />
+                </span>
+              </Link>
+            </article>
+          ))}
+        </div>
 
-          {notice && (
-            <p
-              role={notice.kind === "error" ? "alert" : "status"}
-              className={
-                notice.kind === "error"
-                  ? "rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm leading-5 text-red-700"
-                  : "rounded-lg border border-teal-border bg-teal-tint px-4 py-3 text-sm leading-5 text-teal"
-              }
+        <div className="flex flex-col items-center gap-2 pt-6">
+          <p className="flex flex-wrap items-center justify-center gap-1.5 text-center text-sm leading-5 text-[#334155]">
+            Are you a school admin setting up a new institution?
+            <a
+              href="#sales"
+              className="flex items-center gap-1 font-semibold text-brand hover:underline"
             >
-              {notice.text}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            disabled={busy}
-            className="flex h-12 items-center justify-center rounded-lg bg-brand text-base font-semibold text-white shadow-btn transition-colors hover:bg-[#255d99] disabled:opacity-60"
-          >
-            {busy ? "Creating account…" : "Create account"}
-          </button>
-
-          <SocialAuthButtons onSelect={handleProvider} />
-
-          <p className="text-center text-[13px] leading-5 text-muted">
-            By creating an account you agree to our{" "}
-            <Link to="/terms" className="font-medium text-brand hover:underline">
-              Terms
-            </Link>{" "}
-            and{" "}
-            <Link
-              to="/privacy"
-              className="font-medium text-brand hover:underline"
-            >
-              Privacy Policy
-            </Link>
-            .
+              Talk to sales
+              <span className="h-3 w-[10.5px] overflow-clip">
+                <img
+                  src={arrowSales}
+                  alt=""
+                  aria-hidden
+                  className="size-full"
+                />
+              </span>
+            </a>
           </p>
-        </form>
 
-        <p className="pt-6 text-center text-sm leading-5 text-muted">
-          Already have an account?{" "}
-          <Link to="/login" className="font-semibold text-brand hover:underline">
-            Log in
-          </Link>
-        </p>
+          <p className="flex gap-1 text-sm leading-5 text-authslate">
+            Already have an account?
+            <Link to="/login" className="font-semibold text-brand hover:underline">
+              Sign in
+            </Link>
+          </p>
+        </div>
       </div>
-    </section>
+    </AuthLayout>
   );
 }

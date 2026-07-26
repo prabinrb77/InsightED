@@ -23,9 +23,19 @@ export default {
           DEFAULT: "#E2E8F0",
           soft: "#F3F4F6",
           strong: "#D1D5DB",
+          edge: "#E5E7EB", // card borders on the audience/pricing frames
         },
         page: "#F7FAFC",
+        mist: "#F9FAFB", // trust bar + dashboard chrome
+        panel: "#F5F7FA", // pricing band + auth portal background
         footext: "#9CA3AF",
+        heading: "#1F2937",
+        subtle: "#374151",
+        // Auth portal frames (1:198, 186:1103) use their own greys
+        authink: "#1A202C",
+        authslate: "#64748B",
+        authline: "#D5DAE0",
+        authchip: "#E9F1F1",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
