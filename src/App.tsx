@@ -11,6 +11,7 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import SignupFormPage from "./pages/SignupFormPage";
 import TeacherSignupPage from "./pages/TeacherSignupPage";
+import SpecialistSignupPage from "./pages/SpecialistSignupPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import Placeholder from "./pages/Placeholder";
@@ -22,6 +23,7 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/signup/teacher" element={<TeacherSignupPage />} />
+      <Route path="/signup/specialist" element={<SpecialistSignupPage />} />
       <Route path="/signup/:role" element={<SignupFormPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />

@@ -27,58 +27,35 @@ import {
   NOT_CONFIGURED_NOTICE,
 } from "../lib/supabase";
 import iconInfo from "../assets/icons/tsignup-info.svg";
-import iconCountry from "../assets/icons/tsignup-country.svg";
-import iconPrivacy from "../assets/icons/tsignup-privacy.svg";
-import iconCurrency from "../assets/icons/tsignup-currency.svg";
-import iconResidency from "../assets/icons/tsignup-residency.svg";
-import iconSearch from "../assets/icons/tsignup-search.svg";
 
 /**
- * Figma: 186:1185 (step 1) → 186:1297 (step 2) → 186:1356 (step 3)
- * → 186:1415 (step 4) → 186:1564 (account created).
+ * Figma: 326:5898 (step 1) → 326:6004 (step 2) → 326:6053 (step 3)
+ * → access-code screen → 326:6195 (account created).
  *
- * Email/password creation is real Supabase. The email and SMS code steps are
- * presentational: Supabase sends a confirmation link rather than a 6-digit
- * code, and there's no SMS provider configured, so entering 6 digits advances
- * the wizard without verifying anything server-side.
+ * ⚠️ Those frames are *named* "Teacher Signup" in Figma but their content is the
+ * specialist flow — they were duplicated without renaming the layers.
+ *
+ * As with the teacher wizard, the email/SMS code steps are presentational:
+ * Supabase sends a confirmation link rather than a 6-digit code.
  */
 
-const SCHOOL_SETTINGS = [
-  { icon: iconCountry, label: "Country", value: "Australia" },
-  { icon: iconPrivacy, label: "Privacy framework", value: "APP (Privacy Act 1988)" },
-  { icon: iconCurrency, label: "Currency", value: "AUD" },
-  { icon: iconResidency, label: "Data residency", value: "AWS Sydney" },
-];
-
-export default function TeacherSignupPage() {
+export default function SpecialistSignupPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
 
-  // Step 1
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [mobile, setMobile] = useState("");
-  const [consents, setConsents] = useState({
-    terms: false,
-    ai: false,
-    nonclinical: false,
-  });
+  const [agreed, setAgreed] = useState(false);
 
-  // Steps 2 & 3
   const [emailCode, setEmailCode] = useState("");
   const [smsCode, setSmsCode] = useState("");
-
-  // Step 4
-  const [school, setSchool] = useState("");
-  const [alsoParent, setAlsoParent] = useState(false);
-  const [displayName, setDisplayName] = useState("");
+  const [accessCode, setAccessCode] = useState("");
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const allConsented = consents.terms && consents.ai && consents.nonclinical;
 
   function goto(next: number) {
     setError(null);
@@ -111,7 +88,7 @@ export default function TeacherSignupPage() {
     if (oauthError) setError(oauthError.message);
   }
 
-  async function handleCreateAccount(e: FormEvent) {
+  async function handleVerifyCode(e: FormEvent) {
     e.preventDefault();
     if (!supabase) {
       setError(NOT_CONFIGURED_NOTICE);
@@ -124,11 +101,9 @@ export default function TeacherSignupPage() {
       password,
       options: {
         data: {
-          full_name: displayName,
-          role: "teacher",
+          role: "specialist",
           phone: mobile,
-          school,
-          also_parent: alsoParent,
+          access_code: accessCode,
         },
         emailRedirectTo: authRedirectUrl(),
       },
@@ -149,7 +124,7 @@ export default function TeacherSignupPage() {
         <Card>
           <StepLabel>Step 1 of 4</StepLabel>
           <h1 className="text-2xl font-bold leading-8 text-[#0F172A]">
-            Create your teacher account
+            Create your specialist account
           </h1>
           <p className="text-sm leading-5 text-authslate">
             We'll verify your details to keep students safe.
@@ -158,14 +133,14 @@ export default function TeacherSignupPage() {
           <form onSubmit={handleStep1} className="flex flex-col gap-5 pt-6">
             <label className="flex flex-col gap-2">
               <span className={LABEL}>
-                School Assigned Email <Req />
+                Email Address <Req />
               </span>
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@school.edu.au"
+                placeholder="you@email.com"
                 className={FIELD}
               />
             </label>
@@ -271,11 +246,8 @@ export default function TeacherSignupPage() {
               </button>
             </div>
 
-            <div className="flex flex-col gap-3 pt-2">
-              <Consent
-                checked={consents.terms}
-                onChange={(v) => setConsents((c) => ({ ...c, terms: v }))}
-              >
+            <div className="pt-2">
+              <Consent checked={agreed} onChange={setAgreed}>
                 I agree to the{" "}
                 <Link to="/terms" className="text-brand hover:underline">
                   Terms of Service
@@ -285,24 +257,11 @@ export default function TeacherSignupPage() {
                   Privacy Policy
                 </Link>
               </Consent>
-              <Consent
-                checked={consents.ai}
-                onChange={(v) => setConsents((c) => ({ ...c, ai: v }))}
-              >
-                I understand that AI-generated strategies are educational, not
-                clinical advice
-              </Consent>
-              <Consent
-                checked={consents.nonclinical}
-                onChange={(v) => setConsents((c) => ({ ...c, nonclinical: v }))}
-              >
-                I acknowledge that InsightED provides non-clinical support only
-              </Consent>
             </div>
 
             {error && <ErrorNote>{error}</ErrorNote>}
 
-            <PrimaryOutline type="submit" disabled={!allConsented}>
+            <PrimaryOutline type="submit" disabled={!agreed}>
               Continue to Verification
             </PrimaryOutline>
           </form>
@@ -321,7 +280,7 @@ export default function TeacherSignupPage() {
           <p className="text-sm leading-5 text-authslate">
             We sent a 6-digit code to{" "}
             <span className="font-semibold text-ink">
-              {email || "your school address"}
+              {email || "your email address"}
             </span>
           </p>
 
@@ -384,113 +343,35 @@ export default function TeacherSignupPage() {
       )}
 
       {step === 4 && (
-        <Card>
+        <Card className="max-w-[440px] text-center">
           <StepLabel>Step 4 of 4</StepLabel>
-          <h1 className="text-center text-2xl font-bold leading-8 text-[#0F172A]">
-            Connect to your school
+          <h1 className="pt-2 text-[32px] font-bold leading-10 text-[#0F172A]">
+            Your Access Code
           </h1>
-          <p className="text-center text-sm leading-5 text-authslate">
-            Find your school to inherit its compliance settings
+          <p className="text-sm leading-5 text-authslate">
+            Enter your invitation Access Code to verify your credentials and
+            complete your specialist registration.
           </p>
 
-          <form onSubmit={handleCreateAccount} className="flex flex-col gap-4 pt-6">
-            <label className="flex flex-col gap-2">
-              <span className={LABEL}>
-                Find your school <Req />
-              </span>
-              <span className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2">
-                  <img src={iconSearch} alt="" aria-hidden className="size-full" />
-                </span>
-                <input
-                  required
-                  value={school}
-                  onChange={(e) => setSchool(e.target.value)}
-                  placeholder="Search Your School"
-                  className={`${FIELD} border-2 border-brand pl-10`}
-                />
-              </span>
-            </label>
-
-            <button
-              type="button"
-              className="self-start text-xs font-medium leading-4 text-brand hover:underline"
-            >
-              My school isn't listed — Request to add your school
-            </button>
-
-            <div className="flex flex-col gap-4 rounded-xl border border-[rgba(45,106,106,0.1)] bg-[#E6F0F0] p-5">
-              <h2 className="flex items-center gap-2 text-xs font-bold uppercase leading-4 tracking-[0.6px] text-brand">
-                <span className="size-3">
-                  <img src={iconInfo} alt="" aria-hidden className="size-full" />
-                </span>
-                Your school's settings will be applied
-              </h2>
-              <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {SCHOOL_SETTINGS.map((s) => (
-                  <div key={s.label} className="flex gap-2.5">
-                    <span className="mt-0.5 size-4 shrink-0">
-                      <img
-                        src={s.icon}
-                        alt=""
-                        aria-hidden
-                        className="size-full object-contain"
-                      />
-                    </span>
-                    <span>
-                      <dt className="text-[10px] font-bold uppercase leading-[15px] tracking-[-0.25px] text-authslate">
-                        {s.label}
-                      </dt>
-                      <dd className="text-sm font-semibold leading-5 text-[#1E293B]">
-                        {s.value}
-                      </dd>
-                    </span>
-                  </div>
-                ))}
-              </dl>
-            </div>
-
-            <label className="flex gap-3 p-1">
-              <input
-                type="checkbox"
-                checked={alsoParent}
-                onChange={(e) => setAlsoParent(e.target.checked)}
-                className="mt-0.5 size-4 shrink-0 rounded-sm border-[#767676] accent-brand"
-              />
-              <span className="flex flex-col gap-1">
-                <span className="text-sm font-semibold leading-5 text-[#0F172A]">
-                  I am also a parent of a child at this school
-                </span>
-                <span className="text-xs leading-[19.5px] text-authslate">
-                  We'll create both Teacher and Parent dashboards for you. You'll
-                  choose which role to use at each login.
-                </span>
-              </span>
-            </label>
-
-            <label className="flex flex-col gap-2 pt-2">
-              <span className={LABEL}>
-                How Other will see you <Req />
+          <form onSubmit={handleVerifyCode} className="flex flex-col gap-5 pt-6">
+            <label className="flex flex-col gap-2 text-left">
+              <span className="text-base font-semibold leading-6 text-authink">
+                Access Code
               </span>
               <input
                 required
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Ms Sarah Chen"
+                value={accessCode}
+                onChange={(e) => setAccessCode(e.target.value)}
+                placeholder="e.g. 123456"
                 className={FIELD}
               />
             </label>
 
             {error && <ErrorNote>{error}</ErrorNote>}
 
-            <button
-              type="submit"
-              disabled={busy}
-              className="mt-2 flex items-center justify-center gap-2 rounded-lg bg-brand py-4 text-lg font-bold text-white shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.1),0px_2px_4px_-2px_rgba(0,0,0,0.1)] transition-colors hover:bg-[#255d99] disabled:opacity-60"
-            >
-              {busy ? "Creating account…" : "Create Account"}
-              <span aria-hidden>→</span>
-            </button>
+            <PrimaryOutline type="submit" disabled={busy}>
+              {busy ? "Verifying…" : "Verify Code"}
+            </PrimaryOutline>
           </form>
         </Card>
       )}
@@ -507,7 +388,7 @@ export default function TeacherSignupPage() {
             Account created!
           </h1>
           <p className="text-base leading-6 text-authslate">
-            Welcome to InsightED, {displayName || "Sarah"}.
+            Welcome to InsightED.
           </p>
 
           <ApprovalTracker />
@@ -520,12 +401,8 @@ export default function TeacherSignupPage() {
               What happens next?
             </h2>
             <p className="text-[13px] leading-5 text-body">
-              To ensure student safety, all educators must complete a quick{" "}
-              <strong className="font-bold text-ink">
-                Professional Verification
-              </strong>
-              . You'll need to upload your teaching ID or a letter from your
-              school administration.
+              You will need to upload your professional documents on the next
+              screen to verify your credentials.
             </p>
             <p className="text-[13px] leading-5 text-body">
               Once submitted, our compliance team will review your credentials.
