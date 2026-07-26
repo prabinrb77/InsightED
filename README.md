@@ -23,7 +23,8 @@ npm run build    # type-check + production build
 | `/about` | ✅ Built — mission, values, team, advisors, awards | `260:3600` |
 | `/login` | ✅ Built — "Welcome Back" card, Supabase auth wired | `1:198` |
 | `/signup` | ✅ Built — choose-path role selector | `186:1103` |
-| `/signup/:role` | ⚠️ Interim — real Supabase sign-up, **not** the Figma multi-step flow | — |
+| `/signup/teacher` | ✅ Built — 4-step wizard + account-created state | `186:1185`, `1297`, `1356`, `1415`, `1564` |
+| `/signup/parent`, `/signup/specialist` | ⚠️ Interim — single form, **not** the Figma multi-step flows | — |
 | `/forgot-password`, `/reset-password` | ⚠️ Built on Supabase auth, no Figma frame found | — |
 | Header (marketing) | ✅ Built | `264:1826` |
 | Footer (marketing) | ✅ Built | `316:3267` |
@@ -31,9 +32,21 @@ npm run build    # type-check + production build
 Auth routes render inside `AuthLayout` (slim portal chrome), not the marketing
 `SiteLayout` — that's how the Figma auth frames are designed.
 
-**Still to build from Figma:** the role-specific sign-up steps (teacher steps 1–4,
-parent steps 2–4, specialist activation). `/signup/:role` currently short-circuits
-those with a single email/password form so sign-up works end to end.
+**Still to build from Figma:** the parent and specialist sign-up flows.
+`/signup/:role` short-circuits those with a single email/password form so
+sign-up works end to end.
+
+### Teacher wizard — what's real and what isn't
+
+Steps 2 and 3 (email code, SMS code) are **presentational**. Supabase sends a
+confirmation *link*, not a 6-digit code, and no SMS provider is wired up, so
+entering any 6 digits advances the wizard. The account is actually created by
+the Supabase `signUp` call on step 4. Before launch, either swap these for
+Supabase OTP (`signInWithOtp`) or drop the two steps.
+
+⚠️ **Frame naming trap:** the `326:*` frames are named "P-019/020/021 *Teacher*
+Signup" but their content is the **Specialist** flow — they were duplicated and
+the copy updated without renaming the layers. The real teacher flow is `186:*`.
 
 ## Conventions
 
