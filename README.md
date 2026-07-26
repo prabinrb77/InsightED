@@ -10,6 +10,23 @@ npm run dev      # http://localhost:5173
 npm run build    # type-check + production build
 ```
 
+## Deployment
+
+**Netlify — https://insightedaus.netlify.app** is the primary target, configured
+in [`netlify.toml`](netlify.toml). It serves from the domain root, so Vite's
+`base` stays `/` and the SPA redirect rule makes deep links like
+`/app/students` survive a refresh.
+
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` under **Site configuration
+→ Environment variables** in Netlify, then redeploy — Vite inlines env vars at
+build time, so changing them requires a rebuild, not just a restart.
+
+A GitHub Pages workflow also still exists at
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml). It sets
+`GITHUB_PAGES=true`, which switches `base` to `/InsightED/`. **Both targets
+deploy on push to `main`** — delete the workflow if you only want Netlify,
+otherwise two live copies drift apart.
+
 ## What's built
 
 | Route | Status | Figma node |
