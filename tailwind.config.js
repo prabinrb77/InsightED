@@ -31,6 +31,9 @@ export default {
         footext: "#9CA3AF",
         heading: "#1F2937",
         subtle: "#374151",
+        // Educator app shell (1:495 and siblings)
+        sidebar: "#14294B",
+        sidebarmuted: "#B6C2D4",
         // Auth portal frames (1:198, 186:1103) use their own greys
         authink: "#1A202C",
         authslate: "#64748B",
