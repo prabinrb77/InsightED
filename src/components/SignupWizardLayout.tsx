@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import Logo from "./Logo";
 
 /**
  * Chrome for the multi-step sign-up wizards (Figma 186:1185 … 186:1564):
@@ -31,12 +32,7 @@ export default function SignupWizardLayout({
       </a>
 
       <header className="flex h-[60px] shrink-0 items-center justify-between bg-white px-6 md:px-10">
-        <Link
-          to="/"
-          className="text-2xl font-bold leading-8 tracking-[-0.6px] text-brand"
-        >
-          InsightED
-        </Link>
+        <Logo size="md" />
 
         {showSignIn && (
           <p className="text-sm leading-5 text-authslate">

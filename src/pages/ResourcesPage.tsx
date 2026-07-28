@@ -123,7 +123,7 @@ const RESOURCES = [
     cover: coverStjudes,
     title: "St. Jude's Academy: Scaling inclusive culture",
     excerpt:
-      "How one school district implemented InsightED to support over 500 neurodivergent students across 5 campuses.",
+      "How one school district implemented MiZanova to support over 500 neurodivergent students across 5 campuses.",
     author: "David O'Brien",
     avatar: author6,
     date: "Sep 15, 2023",
@@ -137,7 +137,7 @@ const RESOURCES = [
     title: "Navigating secondary school transitions",
     excerpt:
       "Expert panel discussion on supporting neurodivergent students as they move from primary to high school.",
-    author: "InsightED Panel",
+    author: "MiZanova Panel",
     avatar: author7,
     date: "Sep 08, 2023",
     access: "FREE",

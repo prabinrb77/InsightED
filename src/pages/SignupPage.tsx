@@ -13,19 +13,19 @@ const PATHS = [
   {
     icon: iconTeacher,
     role: "Teacher",
-    body: "Sign up to join your school's InsightED account. You'll need your school's invite code or to select your school from a list.",
+    body: "Sign up to join your school's MiZanova account. You'll need your school's invite code or to select your school from a list.",
     to: "/signup/teacher",
   },
   {
     icon: iconParent,
     role: "Parent",
-    body: "Sign up to support your child. You can join your child's school if they're already on InsightED, or start independently.",
+    body: "Sign up to support your child. You can join your child's school if they're already on MiZanova, or start independently.",
     to: "/signup/parent",
   },
   {
     icon: iconSpecialist,
     role: "Specialist",
-    body: "Sign up to support your students and families. You can join an existing school on InsightED, or manage your specialist practice independently.",
+    body: "Sign up to support your students and families. You can join an existing school on MiZanova, or manage your specialist practice independently.",
     to: "/signup/specialist",
   },
 ];
@@ -44,10 +44,10 @@ export default function SignupPage() {
 
         <div className="flex flex-col gap-2 pt-6 text-center">
           <h1 className="text-2xl font-bold leading-8 tracking-[-0.07px] text-[#0F172A]">
-            Welcome to InsightED
+            Welcome to MiZanova
           </h1>
           <p className="text-sm leading-5 text-authslate">
-            Tell us how you'll be using InsightED
+            Tell us how you'll be using MiZanova
           </p>
         </div>
 

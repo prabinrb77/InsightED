@@ -1,4 +1,4 @@
-# InsightED — web front end
+# MiZanova — web front end
 
 React front end built from the Figma file `UZ69SK3oHm9TxtmwDGQIQx`.
 
@@ -26,6 +26,13 @@ A GitHub Pages workflow also still exists at
 `GITHUB_PAGES=true`, which switches `base` to `/InsightED/`. **Both targets
 deploy on push to `main`** — delete the workflow if you only want Netlify,
 otherwise two live copies drift apart.
+
+Both of those still carry the old **InsightED** name, because they're external
+identifiers rather than app strings: the Netlify subdomain, and the `/InsightED/`
+base path, which has to match the GitHub repo name. Renaming the site or the
+repo means updating the URL above and `base` in
+[`vite.config.ts`](vite.config.ts) to match — until then, leave them alone or
+the GitHub Pages build serves broken asset paths.
 
 ## What's built
 
@@ -78,12 +85,36 @@ Auth routes render inside `AuthLayout` (slim portal chrome), not the marketing
 
 ### Sign-up wizards — what's real and what isn't
 
-The teacher and specialist wizards share `SignupWizardLayout`, `OtpInput` and
-`wizardBits`. Steps 2 and 3 (email code, SMS code) are **presentational**:
-Supabase sends a confirmation *link*, not a 6-digit code, and no SMS provider is
-wired up, so entering any 6 digits advances the wizard. The account is really
-created by the Supabase `signUp` call on the final step. Before launch, either
-swap these for Supabase OTP (`signInWithOtp`) or drop the two steps.
+The teacher and specialist wizards share `SignupWizardLayout`, `OtpInput`,
+`wizardBits` and the auth primitives in [`useSignupFlow`](src/hooks/useSignupFlow.ts).
+
+Steps 2 and 3 verify **real** one-time codes. Because Supabase can only confirm
+an email or phone for a user that already exists, the account is created at
+**step 1**; the final step attaches the remaining details via `updateUser`.
+
+    step 1  signUp()                      → account created, email code sent
+    step 2  verifyOtp(type:'signup')      → email confirmed, session issued
+    step 3  updateUser({phone})           → SMS sent
+            verifyOtp(type:'phone_change')→ phone confirmed
+    step 4  updateUser({data})            → school / access code saved
+
+Phone numbers are normalised to E.164 by `toE164()` — Supabase rejects spaces
+and a leading `0` (`0412 345 678` → `+61412345678`).
+
+**Required Supabase configuration** (the wizard blocks without it):
+
+| Setting | Where | Value |
+| --- | --- | --- |
+| Confirm email | Auth → Providers → Email | **on** |
+| Signup template | Auth → Email Templates → Confirm signup | must contain `{{ .Token }}` |
+| Phone provider | Auth → Providers → Phone | enabled + Twilio credentials |
+
+If "Confirm email" is off, step 1 returns a session and the wizard skips step 2
+rather than dead-ending. If the phone provider is off, step 3 shows an
+actionable error and cannot be passed.
+
+Supabase's built-in mailer is capped at a few messages per hour — fine for
+testing, but wire up SMTP (Resend, SendGrid, SES) before any real volume.
 
 Finishing the wizard drops the new educator at `/app` — Professional
 Verification isn't built, so both buttons on the account-created screen go
@@ -130,6 +161,16 @@ Icons and images for the six marketing pages are **downloaded and committed**:
 - `src/assets/icons/` — SVG icons exported from Figma
 - `src/assets/resources/` — Resources covers + author avatars (resized to 800px / 96px, JPEG)
 - `src/assets/about/` — mission illustration, team and advisor photos, award marks
+- `src/assets/brand/` — MiZanova logo, generated from the 4000px master PNG:
+  `mizanova-mark.png` (512px brain mark) and `mizanova-logo.png` (640px full
+  lockup with wordmark + tagline). `public/` holds the favicon and touch icon
+  cut from the same mark.
+
+Both brand PNGs have the white background flood-filled to transparency. That
+also clears the white line-work wherever it connects to the outside — the
+scales and the seam between the hemispheres — so on a dark surface the mark
+needs a white chip behind it. [`Logo`](src/components/Logo.tsx) does this via
+`tone="light"`; don't drop the bare PNG onto the footer or the app rail.
 
 ### ⚠️ The landing page still uses expiring URLs
 
@@ -155,6 +196,6 @@ Around 100 frames total. The 6 marketing pages are now built; what's left:
 
 ## Notes on gaps in the design
 
-- The header frame has two overlapping "InsightED" text layers — one blue, one white (invisible on the white bar). Only the blue one is rendered; the white one looks like a leftover.
+- The Figma file predates the MiZanova rename and still says "InsightED" throughout. The header frame also has two overlapping wordmark text layers — one blue, one white (invisible on the white bar). Neither is rendered any more; the header uses [`Logo`](src/components/Logo.tsx).
 - The CTA band (`264:5455`) has a heading and subtext but **no button layer**. I added a "Get Started" button so the section has an action — remove it if that was deliberate.
 - The feature grid exports as `grid-cols-2 / grid-rows-2` with three cards, which is a Figma auto-layout export artefact. Rendered as a 3-column grid.

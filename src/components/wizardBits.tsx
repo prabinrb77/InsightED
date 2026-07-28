@@ -132,22 +132,36 @@ export function Countdown({ seconds }: { seconds: number }) {
   );
 }
 
-export function Resend() {
+export function Resend({ onResend }: { onResend?: () => Promise<unknown> }) {
   const [left, setLeft] = useState(60);
+  const [sending, setSending] = useState(false);
+
   useEffect(() => {
     const id = setInterval(() => setLeft((v) => (v > 0 ? v - 1 : 0)), 1000);
     return () => clearInterval(id);
   }, []);
+
+  async function handleClick() {
+    setSending(true);
+    await onResend?.();
+    setSending(false);
+    setLeft(60);
+  }
+
   return (
     <p className="pt-4 text-sm leading-5 text-authslate">
       Didn't get the code?{" "}
       <button
         type="button"
-        disabled={left > 0}
-        onClick={() => setLeft(60)}
+        disabled={left > 0 || sending}
+        onClick={handleClick}
         className="font-medium text-brand disabled:text-footext"
       >
-        {left > 0 ? `Resend code (${left}s)` : "Resend code"}
+        {sending
+          ? "Sending…"
+          : left > 0
+            ? `Resend code (${left}s)`
+            : "Resend code"}
       </button>
     </p>
   );

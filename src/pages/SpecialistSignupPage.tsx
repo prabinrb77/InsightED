@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import useSignupFlow, { toE164 } from "../hooks/useSignupFlow";
 import SignupWizardLayout from "../components/SignupWizardLayout";
 import OtpInput from "../components/OtpInput";
 import { GoogleLogo, MicrosoftLogo } from "../components/SocialAuthButtons";
@@ -21,11 +22,7 @@ import {
   WIZARD_LABEL as LABEL,
   passwordStrength,
 } from "../components/wizardBits";
-import {
-  supabase,
-  authRedirectUrl,
-  NOT_CONFIGURED_NOTICE,
-} from "../lib/supabase";
+import { supabase, authRedirectUrl } from "../lib/supabase";
 import iconInfo from "../assets/icons/tsignup-info.svg";
 
 /**
@@ -35,8 +32,9 @@ import iconInfo from "../assets/icons/tsignup-info.svg";
  * ⚠️ Those frames are *named* "Teacher Signup" in Figma but their content is the
  * specialist flow — they were duplicated without renaming the layers.
  *
- * As with the teacher wizard, the email/SMS code steps are presentational:
- * Supabase sends a confirmation link rather than a 6-digit code.
+ * As with the teacher wizard, the account is created at step 1 so the emailed
+ * and texted one-time codes can be verified against a real user.
+ * See useSignupFlow for the required Supabase dashboard configuration.
  */
 
 export default function SpecialistSignupPage() {
@@ -54,8 +52,12 @@ export default function SpecialistSignupPage() {
   const [smsCode, setSmsCode] = useState("");
   const [accessCode, setAccessCode] = useState("");
 
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [dialCode, setDialCode] = useState("+61");
+
+  const flow = useSignupFlow();
+  const { busy, error, setError } = flow;
+
+  const e164 = toE164(dialCode, mobile);
 
   function goto(next: number) {
     setError(null);
@@ -63,18 +65,49 @@ export default function SpecialistSignupPage() {
     window.scrollTo(0, 0);
   }
 
-  function handleStep1(e: FormEvent) {
+  /** Step 1 — create the account, which sends the email code. */
+  async function handleStep1(e: FormEvent) {
     e.preventDefault();
     if (password !== confirm) {
       setError("Passwords don't match.");
       return;
     }
-    goto(2);
+    const res = await flow.createAccount(email, password, {
+      role: "specialist",
+      phone_pending: e164,
+    });
+    if (!res.ok) return;
+    if (res.skipEmailVerification) {
+      goto(3);
+      await startPhoneVerification();
+    } else {
+      goto(2);
+    }
+  }
+
+  /** Step 2 — check the emailed code, then trigger the SMS. */
+  async function handleVerifyEmail() {
+    const res = await flow.verifyEmail(email, emailCode);
+    if (!res.ok) return;
+    goto(3);
+    await startPhoneVerification();
+  }
+
+  async function startPhoneVerification() {
+    if (!mobile.trim()) return;
+    await flow.sendPhoneCode(e164);
+  }
+
+  /** Step 3 — check the SMS code. */
+  async function handleVerifyPhone() {
+    const res = await flow.verifyPhone(e164, smsCode);
+    if (!res.ok) return;
+    goto(4);
   }
 
   async function handleProvider(provider: "google" | "microsoft") {
     if (!supabase) {
-      setError(NOT_CONFIGURED_NOTICE);
+      setError(flow.demoNotice);
       return;
     }
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
@@ -88,29 +121,15 @@ export default function SpecialistSignupPage() {
     if (oauthError) setError(oauthError.message);
   }
 
+  /** Step 4 — attach the access code to the confirmed account. */
   async function handleVerifyCode(e: FormEvent) {
     e.preventDefault();
-    if (!supabase) {
-      setError(NOT_CONFIGURED_NOTICE);
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          role: "specialist",
-          phone: mobile,
-          access_code: accessCode,
-        },
-        emailRedirectTo: authRedirectUrl(),
-      },
+    const res = await flow.saveProfile({
+      role: "specialist",
+      phone: e164,
+      access_code: accessCode,
     });
-    setBusy(false);
-    if (signUpError) setError(signUpError.message);
-    else goto(5);
+    if (res.ok) goto(5);
   }
 
   return (
@@ -207,7 +226,8 @@ export default function SpecialistSignupPage() {
                 <select
                   aria-label="Country calling code"
                   className="w-28 shrink-0 rounded-lg border border-authline bg-white px-3 py-3.5 text-base text-ink focus:border-brand focus:outline-none"
-                  defaultValue="+61"
+                  value={dialCode}
+                  onChange={(e) => setDialCode(e.target.value)}
                 >
                   <option value="+61">🇦🇺 +61</option>
                   <option value="+64">🇳🇿 +64</option>
@@ -293,12 +313,14 @@ export default function SpecialistSignupPage() {
           </div>
 
           <Countdown seconds={582} />
-          <Resend />
+          <Resend onResend={() => flow.resendEmail(email)} />
+
+          {error && <ErrorNote>{error}</ErrorNote>}
 
           <PrimaryOutline
             type="button"
-            disabled={emailCode.length < 6}
-            onClick={() => goto(3)}
+            disabled={emailCode.length < 6 || busy}
+            onClick={handleVerifyEmail}
           >
             Verify &amp; Continue
           </PrimaryOutline>
@@ -317,7 +339,7 @@ export default function SpecialistSignupPage() {
           <p className="text-sm leading-5 text-authslate">
             We sent a 6-digit code by SMS to{" "}
             <span className="font-semibold text-ink">
-              +61 {mobile || "412 345 678"}
+              {mobile ? e164 : `${dialCode} 412 345 678`}
             </span>
           </p>
 
@@ -330,12 +352,14 @@ export default function SpecialistSignupPage() {
           </div>
 
           <Countdown seconds={299} />
-          <Resend />
+          <Resend onResend={startPhoneVerification} />
+
+          {error && <ErrorNote>{error}</ErrorNote>}
 
           <PrimaryOutline
             type="button"
-            disabled={smsCode.length < 6}
-            onClick={() => goto(4)}
+            disabled={smsCode.length < 6 || busy}
+            onClick={handleVerifyPhone}
           >
             Verify &amp; Continue
           </PrimaryOutline>
@@ -388,7 +412,7 @@ export default function SpecialistSignupPage() {
             Account created!
           </h1>
           <p className="text-base leading-6 text-authslate">
-            Welcome to InsightED.
+            Welcome to MiZanova.
           </p>
 
           <ApprovalTracker />

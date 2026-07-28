@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import Logo from "./Logo";
 
 /**
  * Standalone auth-portal chrome. The Figma auth frames don't use the marketing
@@ -36,17 +36,7 @@ export default function AuthLayout({
             : "h-16 border-line px-6 md:px-8",
         ].join(" ")}
       >
-        <Link
-          to="/"
-          className={[
-            "font-bold text-brand",
-            portal
-              ? "text-2xl leading-8 tracking-[-0.6px]"
-              : "text-xl leading-[30px] tracking-[-0.5px]",
-          ].join(" ")}
-        >
-          InsightED
-        </Link>
+        <Logo size={portal ? "md" : "sm"} />
 
         {portal && (
           <p className="text-sm leading-5 text-authslate">
@@ -68,7 +58,7 @@ export default function AuthLayout({
       {portal ? (
         <footer className="flex w-full items-center justify-center border-t border-authline bg-white px-6 py-4">
           <p className="flex flex-wrap items-center justify-center gap-2 text-xs leading-[18px] text-authslate">
-            <span>© 2026 InsightED by Special Miles.</span>
+            <span>© 2026 MiZanova by Special Miles.</span>
             <span aria-hidden>·</span>
             <a href="#privacy" className="hover:text-brand">
               Privacy Policy
@@ -86,7 +76,7 @@ export default function AuthLayout({
       ) : (
         <footer className="flex w-full flex-wrap items-center justify-between gap-3 px-6 py-6 md:px-8">
           <p className="text-xs leading-[18px] text-slate">
-            © 2026 InsightED Unified Authentication Portal
+            © 2026 MiZanova Unified Authentication Portal
           </p>
           <div className="flex gap-6">
             <a

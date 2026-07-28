@@ -181,7 +181,7 @@ const FAQS = [
   },
   {
     q: "Do you offer refunds?",
-    a: "If InsightED isn't working for your school within the first 30 days of a paid term, we'll refund it in full.",
+    a: "If MiZanova isn't working for your school within the first 30 days of a paid term, we'll refund it in full.",
   },
   {
     q: "Is GST included?",

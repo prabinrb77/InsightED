@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
+import Logo from "./Logo";
 import useSession from "../hooks/useSession";
 import { supabase } from "../lib/supabase";
 
@@ -21,13 +22,7 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-white">
       <div className="mx-auto flex h-16 max-w-shell items-center gap-6 px-6">
-        <Link
-          to="/"
-          className="text-xl font-bold leading-[30px] text-brand"
-          onClick={() => setOpen(false)}
-        >
-          InsightED
-        </Link>
+        <Logo size="sm" onClick={() => setOpen(false)} />
 
         {/* Desktop nav */}
         <nav className="ml-auto hidden items-center gap-6 lg:flex" aria-label="Primary">

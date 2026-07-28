@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import Avatar from "./Avatar";
+import Logo from "./Logo";
 
 /** Figma: educator app shell — dark rail + search/profile top bar (1:495 and siblings). */
 
@@ -22,9 +23,7 @@ export default function AppLayout() {
 
       {/* ── Rail ─────────────────────────────────────────────── */}
       <div className="sticky top-0 hidden h-screen w-[216px] shrink-0 flex-col bg-sidebar py-7 md:flex">
-        <NavLink to="/app" className="px-6 text-xl font-bold text-white">
-          InsightED
-        </NavLink>
+        <Logo to="/app" size="sm" tone="light" className="px-6" />
 
         <nav aria-label="Educator" className="flex flex-col gap-1 px-3 pt-10">
           {NAV.map((item) => (

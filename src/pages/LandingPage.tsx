@@ -88,7 +88,7 @@ export default function LandingPage() {
       {/* ── Features ─────────────────────────────────────────── */}
       <section className="bg-white px-6 pb-24 pt-16 md:px-20 md:pt-[149px]">
         <div className="mx-auto max-w-shell border-t border-line-soft px-0 pt-16 md:px-6">
-          <h2 className="sr-only">Why InsightED</h2>
+          <h2 className="sr-only">Why MiZanova</h2>
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => (
               <article

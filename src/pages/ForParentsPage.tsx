@@ -78,8 +78,8 @@ const FAQS = [
     a: "Once your child's school connects your account, classroom logs flow through automatically — you see the same observations their teachers record, as they happen.",
   },
   {
-    q: "What if my child's school doesn't use InsightED?",
-    a: "You can still use the parent tools on your own, and we'll help you invite your school. Many schools start after a parent introduces them to InsightED.",
+    q: "What if my child's school doesn't use MiZanova?",
+    a: "You can still use the parent tools on your own, and we'll help you invite your school. Many schools start after a parent introduces them to MiZanova.",
   },
   {
     q: "Can I share access with my child's therapist?",
@@ -213,7 +213,7 @@ export default function ForParentsPage() {
           </h2>
           <p className="text-base leading-[26px] text-body">
             The school day can feel like a black box. You pick up your child and
-            see they are overwhelmed, but you don't know why. InsightED provides
+            see they are overwhelmed, but you don't know why. MiZanova provides
             the missing link—connecting real-time classroom data with actionable
             home strategies, ensuring you never have to guess about triggers or
             emotional regulation needs again.
@@ -294,11 +294,11 @@ export default function ForParentsPage() {
         </div>
       </section>
 
-      {/* ── How InsightED supports you ───────────────────────── */}
+      {/* ── How MiZanova supports you ───────────────────────── */}
       <section className="bg-white px-6 py-24 md:px-20">
         <div className="mx-auto flex max-w-shell flex-col gap-16">
           <h2 className="text-center text-4xl font-bold leading-10 tracking-[-1px] text-ink">
-            How InsightED supports you
+            How MiZanova supports you
           </h2>
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {SUPPORT.map((s) => (

@@ -17,4 +17,4 @@ export function authRedirectUrl(path = "") {
 }
 
 export const NOT_CONFIGURED_NOTICE =
-  "Accounts aren't open yet — logins will work once the InsightED app launches.";
+  "Accounts aren't open yet — logins will work once the MiZanova app launches.";

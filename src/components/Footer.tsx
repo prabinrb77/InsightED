@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import Logo from "./Logo";
 import {
   iconHeart,
   iconRegion,
@@ -49,9 +50,9 @@ const COLUMNS: { heading: string; links: { label: string; to: string }[] }[] = [
 ];
 
 const SOCIALS = [
-  { src: iconSocial1, label: "InsightED on X", size: "h-[13px] w-4" },
-  { src: iconSocial2, label: "InsightED on LinkedIn", size: "h-[14px] w-[14px]" },
-  { src: iconSocial3, label: "InsightED on YouTube", size: "h-3 w-[17px]" },
+  { src: iconSocial1, label: "MiZanova on X", size: "h-[13px] w-4" },
+  { src: iconSocial2, label: "MiZanova on LinkedIn", size: "h-[14px] w-[14px]" },
+  { src: iconSocial3, label: "MiZanova on YouTube", size: "h-3 w-[17px]" },
 ];
 
 export default function Footer() {
@@ -101,9 +102,7 @@ export default function Footer() {
 
         <div className="mt-16 flex flex-col items-start gap-4 border-t border-white/10 pt-8 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-bold leading-5 tracking-[-0.35px] text-white">
-              InsightED
-            </span>
+            <Logo size="sm" tone="light" />
             <span className="text-base leading-6 text-body" aria-hidden>
               |
             </span>

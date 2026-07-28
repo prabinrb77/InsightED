@@ -6,6 +6,10 @@ export default {
       colors: {
         // Pulled from the Figma file — keep these as the single source of truth.
         ink: "#0F1B2D", // headings / footer background
+        // Sampled straight off the MiZanova logo artwork — the wordmark reads
+        // navy on "MiZa" and green on "nova".
+        navy: "#001F51",
+        leaf: "#4C8D05",
         brand: {
           DEFAULT: "#2B6CB0", // primary blue: buttons, links, CTA band
           tint: "rgba(37,99,235,0.05)", // hero panel wash

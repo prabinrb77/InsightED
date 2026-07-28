@@ -206,11 +206,11 @@ export default function ForSchoolsPage() {
 
       <TrustBar />
 
-      {/* ── Why schools choose InsightED ─────────────────────── */}
+      {/* ── Why schools choose MiZanova ─────────────────────── */}
       <section className="bg-white px-6 py-24 md:px-20">
         <div className="mx-auto flex max-w-shell flex-col gap-16 px-6">
           <h2 className="text-center text-4xl font-bold leading-10 text-ink">
-            Why schools choose InsightED
+            Why schools choose MiZanova
           </h2>
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {BENEFITS.map((b) => (
@@ -445,7 +445,7 @@ export default function ForSchoolsPage() {
                   className="rounded-lg border border-teal-border bg-teal-tint px-4 py-3 text-sm leading-5 text-teal"
                 >
                   Thanks — pilot requests aren't being taken yet. We'll open
-                  them alongside the InsightED launch.
+                  them alongside the MiZanova launch.
                 </p>
               )}
 

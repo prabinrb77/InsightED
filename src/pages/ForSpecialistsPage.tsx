@@ -408,7 +408,7 @@ export default function ForSpecialistsPage() {
                   className="rounded-lg border border-teal-border bg-teal-tint px-4 py-3 text-sm leading-5 text-teal"
                 >
                   Thanks — the specialist network isn't open for applications
-                  yet. We'll start reviewing alongside the InsightED launch.
+                  yet. We'll start reviewing alongside the MiZanova launch.
                 </p>
               )}
 

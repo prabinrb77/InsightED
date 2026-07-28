@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import useSignupFlow, { toE164 } from "../hooks/useSignupFlow";
 import SignupWizardLayout from "../components/SignupWizardLayout";
 import OtpInput from "../components/OtpInput";
 import { GoogleLogo, MicrosoftLogo } from "../components/SocialAuthButtons";
@@ -21,11 +22,7 @@ import {
   WIZARD_LABEL as LABEL,
   passwordStrength,
 } from "../components/wizardBits";
-import {
-  supabase,
-  authRedirectUrl,
-  NOT_CONFIGURED_NOTICE,
-} from "../lib/supabase";
+import { supabase, authRedirectUrl } from "../lib/supabase";
 import iconInfo from "../assets/icons/tsignup-info.svg";
 import iconCountry from "../assets/icons/tsignup-country.svg";
 import iconPrivacy from "../assets/icons/tsignup-privacy.svg";
@@ -37,10 +34,10 @@ import iconSearch from "../assets/icons/tsignup-search.svg";
  * Figma: 186:1185 (step 1) → 186:1297 (step 2) → 186:1356 (step 3)
  * → 186:1415 (step 4) → 186:1564 (account created).
  *
- * Email/password creation is real Supabase. The email and SMS code steps are
- * presentational: Supabase sends a confirmation link rather than a 6-digit
- * code, and there's no SMS provider configured, so entering 6 digits advances
- * the wizard without verifying anything server-side.
+ * The account is created at step 1 — Supabase can only verify an email or
+ * phone for a user that already exists. Steps 2 and 3 check real one-time
+ * codes; step 4 attaches the school details to the confirmed account.
+ * See useSignupFlow for the required Supabase dashboard configuration.
  */
 
 const SCHOOL_SETTINGS = [
@@ -75,10 +72,13 @@ export default function TeacherSignupPage() {
   const [alsoParent, setAlsoParent] = useState(false);
   const [displayName, setDisplayName] = useState("");
 
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [dialCode, setDialCode] = useState("+61");
+
+  const flow = useSignupFlow();
+  const { busy, error, setError } = flow;
 
   const allConsented = consents.terms && consents.ai && consents.nonclinical;
+  const e164 = toE164(dialCode, mobile);
 
   function goto(next: number) {
     setError(null);
@@ -86,18 +86,50 @@ export default function TeacherSignupPage() {
     window.scrollTo(0, 0);
   }
 
-  function handleStep1(e: FormEvent) {
+  /** Step 1 — create the account, which sends the email code. */
+  async function handleStep1(e: FormEvent) {
     e.preventDefault();
     if (password !== confirm) {
       setError("Passwords don't match.");
       return;
     }
-    goto(2);
+    const res = await flow.createAccount(email, password, {
+      role: "teacher",
+      phone_pending: e164,
+    });
+    if (!res.ok) return;
+    // "Confirm email" off in the dashboard means there's no code to check.
+    if (res.skipEmailVerification) {
+      goto(3);
+      await startPhoneVerification();
+    } else {
+      goto(2);
+    }
+  }
+
+  /** Step 2 — check the emailed code, then trigger the SMS. */
+  async function handleVerifyEmail() {
+    const res = await flow.verifyEmail(email, emailCode);
+    if (!res.ok) return;
+    goto(3);
+    await startPhoneVerification();
+  }
+
+  async function startPhoneVerification() {
+    if (!mobile.trim()) return;
+    await flow.sendPhoneCode(e164);
+  }
+
+  /** Step 3 — check the SMS code. */
+  async function handleVerifyPhone() {
+    const res = await flow.verifyPhone(e164, smsCode);
+    if (!res.ok) return;
+    goto(4);
   }
 
   async function handleProvider(provider: "google" | "microsoft") {
     if (!supabase) {
-      setError(NOT_CONFIGURED_NOTICE);
+      setError(flow.demoNotice);
       return;
     }
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
@@ -111,33 +143,17 @@ export default function TeacherSignupPage() {
     if (oauthError) setError(oauthError.message);
   }
 
+  /** Step 4 — attach the school details to the confirmed account. */
   async function handleCreateAccount(e: FormEvent) {
     e.preventDefault();
-    if (!supabase) {
-      // Demo mode: no Supabase keys, so skip account creation and show the
-      // completed state anyway rather than dead-ending the walkthrough.
-      goto(5);
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: displayName,
-          role: "teacher",
-          phone: mobile,
-          school,
-          also_parent: alsoParent,
-        },
-        emailRedirectTo: authRedirectUrl(),
-      },
+    const res = await flow.saveProfile({
+      full_name: displayName,
+      role: "teacher",
+      phone: e164,
+      school,
+      also_parent: alsoParent,
     });
-    setBusy(false);
-    if (signUpError) setError(signUpError.message);
-    else goto(5);
+    if (res.ok) goto(5);
   }
 
   return (
@@ -234,7 +250,8 @@ export default function TeacherSignupPage() {
                 <select
                   aria-label="Country calling code"
                   className="w-28 shrink-0 rounded-lg border border-authline bg-white px-3 py-3.5 text-base text-ink focus:border-brand focus:outline-none"
-                  defaultValue="+61"
+                  value={dialCode}
+                  onChange={(e) => setDialCode(e.target.value)}
                 >
                   <option value="+61">🇦🇺 +61</option>
                   <option value="+64">🇳🇿 +64</option>
@@ -298,7 +315,7 @@ export default function TeacherSignupPage() {
                 checked={consents.nonclinical}
                 onChange={(v) => setConsents((c) => ({ ...c, nonclinical: v }))}
               >
-                I acknowledge that InsightED provides non-clinical support only
+                I acknowledge that MiZanova provides non-clinical support only
               </Consent>
             </div>
 
@@ -336,12 +353,14 @@ export default function TeacherSignupPage() {
           </div>
 
           <Countdown seconds={582} />
-          <Resend />
+          <Resend onResend={() => flow.resendEmail(email)} />
+
+          {error && <ErrorNote>{error}</ErrorNote>}
 
           <PrimaryOutline
             type="button"
-            disabled={emailCode.length < 6}
-            onClick={() => goto(3)}
+            disabled={emailCode.length < 6 || busy}
+            onClick={handleVerifyEmail}
           >
             Verify &amp; Continue
           </PrimaryOutline>
@@ -360,7 +379,7 @@ export default function TeacherSignupPage() {
           <p className="text-sm leading-5 text-authslate">
             We sent a 6-digit code by SMS to{" "}
             <span className="font-semibold text-ink">
-              +61 {mobile || "412 345 678"}
+              {mobile ? e164 : `${dialCode} 412 345 678`}
             </span>
           </p>
 
@@ -373,12 +392,14 @@ export default function TeacherSignupPage() {
           </div>
 
           <Countdown seconds={299} />
-          <Resend />
+          <Resend onResend={startPhoneVerification} />
+
+          {error && <ErrorNote>{error}</ErrorNote>}
 
           <PrimaryOutline
             type="button"
-            disabled={smsCode.length < 6}
-            onClick={() => goto(4)}
+            disabled={smsCode.length < 6 || busy}
+            onClick={handleVerifyPhone}
           >
             Verify &amp; Continue
           </PrimaryOutline>
@@ -509,7 +530,7 @@ export default function TeacherSignupPage() {
             Account created!
           </h1>
           <p className="text-base leading-6 text-authslate">
-            Welcome to InsightED, {displayName || "Sarah"}.
+            Welcome to MiZanova, {displayName || "Sarah"}.
           </p>
 
           <ApprovalTracker />

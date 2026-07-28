@@ -18,7 +18,7 @@ import {
 const ROLE_COPY: Record<string, { label: string; blurb: string }> = {
   teacher: {
     label: "Teacher",
-    blurb: "Join your school's InsightED account.",
+    blurb: "Join your school's MiZanova account.",
   },
   parent: {
     label: "Parent",
