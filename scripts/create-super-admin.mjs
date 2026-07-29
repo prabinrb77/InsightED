@@ -11,20 +11,27 @@
  * given a VITE_ prefix, which would inline it into the client bundle.
  *
  * Safe to run more than once: an existing account is updated in place rather
- * than duplicated.
+ * than duplicated, so this doubles as a password reset.
  *
  * Why a script and not SQL: auth.users has invariants Supabase owns, so the
  * account is created through the Admin API. Promoting to super_admin then has
  * to happen outside the app, because handle_new_user() deliberately refuses
  * admin roles claimed in signup metadata.
+ *
+ * Override any of these with env vars:
+ *   SUPER_ADMIN_EMAIL     default prabinrb77@gmail.com
+ *   SUPER_ADMIN_PASSWORD  default P@ssw0rd123
+ *   SUPER_ADMIN_PHONE     optional, only if phone sign-in is enabled
+ *   SUPER_ADMIN_NAME      default "Super Admin"
  */
 
 import { createClient } from "@supabase/supabase-js";
 
 const url = process.env.SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const phone = process.env.SUPER_ADMIN_PHONE ?? "+61400071139";
+const email = (process.env.SUPER_ADMIN_EMAIL ?? "prabinrb77@gmail.com").toLowerCase();
 const password = process.env.SUPER_ADMIN_PASSWORD ?? "P@ssw0rd123";
+const phone = process.env.SUPER_ADMIN_PHONE ?? null;
 const fullName = process.env.SUPER_ADMIN_NAME ?? "Super Admin";
 
 function die(message) {
@@ -47,21 +54,19 @@ const db = createClient(url, serviceKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-/** Supabase stores numbers without the leading '+'. */
-const bare = phone.replace(/\D/g, "");
-
-console.log(`\nSuper admin setup for ${phone}`);
+console.log(`\nSuper admin setup for ${email}`);
 console.log(`  project: ${url}\n`);
 
 // ── 1 · find or create the auth user ────────────────────────────────────────
+// email_confirm skips the confirmation email — the account is provisioned by an
+// operator who already controls the address, not self-registered.
 let userId;
 
 const { data: created, error: createError } = await db.auth.admin.createUser({
-  phone,
+  email,
   password,
-  // Marks the number verified without sending an SMS, so no Twilio spend is
-  // needed to create the account.
-  phone_confirm: true,
+  email_confirm: true,
+  ...(phone ? { phone, phone_confirm: true } : {}),
   user_metadata: { full_name: fullName },
 });
 
@@ -74,10 +79,10 @@ if (!createError) {
   });
   if (listError) die(`Could not list users: ${listError.message}`);
 
-  const found = list.users.find((u) => (u.phone ?? "").replace(/\D/g, "") === bare);
+  const found = list.users.find((u) => (u.email ?? "").toLowerCase() === email);
   if (!found) {
     die(
-      `Supabase says ${phone} is taken, but no user carries that number.\n` +
+      `Supabase says ${email} is taken, but no user carries that address.\n` +
         "  Check Authentication → Users in the dashboard.",
     );
   }
@@ -87,38 +92,38 @@ if (!createError) {
 
   const { error: updateError } = await db.auth.admin.updateUserById(userId, {
     password,
-    phone_confirm: true,
+    email_confirm: true,
   });
   if (updateError) die(`Could not reset the password: ${updateError.message}`);
-  console.log("✔ password and phone confirmation reset");
+  console.log("✔ password reset and email marked confirmed");
 } else {
-  die(
-    `Could not create the account: ${createError.message}\n` +
-      "  If this mentions the phone provider, enable it first:\n" +
-      "  Authentication → Sign In / Providers → Phone.",
-  );
+  die(`Could not create the account: ${createError.message}`);
 }
 
-// ── 2 · make sure a profile row exists ──────────────────────────────────────
-// handle_new_user() normally does this, but repair it if the trigger predates
-// migration 0002 (which taught it to read auth.users.phone).
-const { error: upsertError } = await db
-  .from("profiles")
-  .upsert(
-    { id: userId, role: "super_admin", full_name: fullName, phone },
-    { onConflict: "id" },
-  );
+// ── 2 · make sure the profile row says super_admin ──────────────────────────
+// handle_new_user() creates the row but always as 'teacher'; it refuses admin
+// claims by design, so the promotion happens here with the service_role key.
+const { error: upsertError } = await db.from("profiles").upsert(
+  {
+    id: userId,
+    role: "super_admin",
+    full_name: fullName,
+    email,
+    ...(phone ? { phone } : {}),
+  },
+  { onConflict: "id" },
+);
 if (upsertError) {
   die(
     `Could not write the profile row: ${upsertError.message}\n` +
-      "  Have you run supabase/migrations/0001 and 0002?",
+      "  Have you run the migrations in supabase/migrations/?",
   );
 }
 
 // ── 3 · confirm ─────────────────────────────────────────────────────────────
 const { data: profile, error: readError } = await db
   .from("profiles")
-  .select("id, role, full_name, phone")
+  .select("id, role, full_name, email")
   .eq("id", userId)
   .single();
 
@@ -129,9 +134,6 @@ if (profile.role !== "super_admin") {
 
 console.log("✔ profile role is super_admin\n");
 console.log("Done. Sign in at /login with:");
-console.log(`  identifier  ${phone.replace("+61", "0")}  (or ${phone})`);
-console.log("  password    the one you set\n");
-console.log(
-  "If sign-in returns \"Phone logins are disabled\", the account is fine —\n" +
-    "enable Authentication → Sign In / Providers → Phone in Supabase.\n",
-);
+console.log(`  email     ${email}`);
+console.log("  password  the one you set\n");
+console.log("You'll land on /admin — the console is gated to super_admin.\n");

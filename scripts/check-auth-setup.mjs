@@ -28,7 +28,8 @@ function loadEnvLocal() {
 const env = { ...loadEnvLocal(), ...process.env };
 const url = env.SUPABASE_URL ?? env.VITE_SUPABASE_URL;
 const anon = env.SUPABASE_ANON_KEY ?? env.VITE_SUPABASE_ANON_KEY;
-const phone = env.SUPER_ADMIN_PHONE ?? "+61400071139";
+const email = env.SUPER_ADMIN_EMAIL ?? "prabinrb77@gmail.com";
+const phone = env.SUPER_ADMIN_PHONE ?? null;
 
 if (!url || !anon) {
   console.error("\n✖ No Supabase URL/anon key found in .env.local or the environment.\n");
@@ -50,23 +51,41 @@ console.log(
   }`,
 );
 
-const probe = await fetch(`${url}/auth/v1/token?grant_type=password`, {
-  method: "POST",
-  headers: { apikey: anon, "Content-Type": "application/json" },
-  body: JSON.stringify({ phone, password: "probe-not-a-real-password" }),
-}).then((r) => r.json());
+async function probe(label, credentials, hints) {
+  const res = await fetch(`${url}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { apikey: anon, "Content-Type": "application/json" },
+    body: JSON.stringify({ ...credentials, password: "probe-not-a-real-password" }),
+  }).then((r) => r.json());
 
-console.log(`\nPhone sign-in probe (${phone})`);
-switch (probe.error_code) {
-  case "phone_provider_disabled":
-    console.log("  ✖ Phone logins are disabled.");
-    console.log("    → Authentication → Sign In / Providers → Phone (needs Twilio credentials).");
-    break;
-  case "invalid_credentials":
-    console.log("  ✔ Phone auth is live and the endpoint accepts this number.");
-    console.log("    → If the real password also fails, run scripts/create-super-admin.mjs.");
-    break;
-  default:
-    console.log(`  ? ${probe.error_code ?? probe.msg ?? JSON.stringify(probe)}`);
+  console.log(`\n${label}`);
+  const hint = hints[res.error_code];
+  if (hint) hint();
+  else console.log(`  ? ${res.error_code ?? res.msg ?? JSON.stringify(res)}`);
+}
+
+await probe(`Email sign-in probe (${email})`, { email }, {
+  // Supabase returns the same error whether or not the account exists, to avoid
+  // leaking which addresses are registered — so this confirms the endpoint is
+  // reachable, not that the super admin has been created.
+  invalid_credentials: () => {
+    console.log("  ✔ Email sign-in is live.");
+    console.log("    → Can't tell from outside whether the account exists;");
+    console.log("      run scripts/create-super-admin.mjs — it's safe to re-run.");
+  },
+  email_provider_disabled: () => {
+    console.log("  ✖ Email logins are disabled.");
+    console.log("    → Authentication → Sign In / Providers → Email.");
+  },
+});
+
+if (phone) {
+  await probe(`Phone sign-in probe (${phone})`, { phone }, {
+    phone_provider_disabled: () => {
+      console.log("  ✖ Phone logins are disabled.");
+      console.log("    → Needs the Phone provider plus Twilio credentials.");
+    },
+    invalid_credentials: () => console.log("  ✔ Phone auth is live."),
+  });
 }
 console.log("");

@@ -178,21 +178,25 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ... \
 node scripts/create-super-admin.mjs
 ```
 
-It creates the account through the Admin API with `phone_confirm: true` (no SMS
-sent, so no Twilio spend) and promotes the profile to `super_admin`. Re-running
-it repairs an existing account rather than duplicating it. The service_role key
-bypasses every RLS policy — keep it out of the repo, out of the browser, and
+It creates the account through the Admin API with `email_confirm: true` and
+promotes the profile to `super_admin`. Re-running it repairs an existing account
+rather than duplicating it, so it doubles as a password reset. The service_role
+key bypasses every RLS policy — keep it out of the repo, out of the browser, and
 never give it a `VITE_` prefix.
 
+Defaults to `prabinrb77@gmail.com`; override with `SUPER_ADMIN_EMAIL`,
+`SUPER_ADMIN_PASSWORD`, `SUPER_ADMIN_NAME`.
+
 `node scripts/check-auth-setup.mjs` reports which providers are live and probes
-phone sign-in, so a failing login can be traced to a setting instead of guessed
-at. [`supabase/seed_super_admin.sql`](supabase/seed_super_admin.sql) is the
-manual SQL equivalent.
+sign-in, so a failing login can be traced to a setting instead of guessed at.
+[`supabase/seed_super_admin.sql`](supabase/seed_super_admin.sql) is the manual
+SQL equivalent.
 
 Sign-in accepts a phone number or an email in the same field;
-`src/lib/authIdentifier.ts` normalises `0400071139`, `61400071139` and
-`+61 400 071 139` all to `+61400071139`. Phone sign-in additionally needs
-**Authentication → Sign In / Providers → Phone** enabled in Supabase.
+`src/lib/authIdentifier.ts` normalises `0400071139` and `+61 400 071 139` alike
+to `+61400071139`. Email is the supported path — phone sign-in additionally
+needs the Phone provider plus Twilio credentials, which the project doesn't
+have. Pass `SUPER_ADMIN_PHONE` to the script if that changes.
 
 ### Creating schools
 
