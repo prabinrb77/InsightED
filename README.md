@@ -148,6 +148,46 @@ the generic form rather than an invented multi-step flow. Design the parent
 screens (or confirm "Link Your Children" is the intended step 2) and it can be
 built the same way as the other two.
 
+## Super admin console
+
+`/admin` is a separate shell (`SuperAdminLayout`) with its own navy rail, gated
+by `RequireRole` to `profiles.role = 'super_admin'`.
+
+| Route | Figma | Status |
+| --- | --- | --- |
+| `/admin` | SU1 `1:7565` Global Command Center | built |
+| `/admin/tenants` | SU2 `1:7857` Tenant Management | built |
+| `/admin/settings` | `1:9540` Settings & RBAC | built |
+| `/admin/mlops`, `/security`, `/infrastructure`, `/billing` | `1:8124`, `1:8478`, `1:9168`, `1:8729` | placeholder |
+
+**The guard is not the security boundary — RLS is.** `RequireRole` only keeps
+honest users out of screens that would show them empty tables; anyone who edits
+their local state still gets nothing back, because
+[`0002_super_admin.sql`](supabase/migrations/0002_super_admin.sql) is what
+actually grants a super_admin read access.
+
+### Creating the first super admin
+
+Roles can't be self-assigned: `handle_new_user()` refuses `school_admin` and
+`super_admin` claims from signup metadata. So the first one is made by hand —
+follow [`supabase/seed_super_admin.sql`](supabase/seed_super_admin.sql), which
+creates the account through the Admin API (service_role key, from a terminal —
+never the browser) and then promotes it.
+
+Sign-in accepts a phone number or an email in the same field;
+`src/lib/authIdentifier.ts` normalises `0400071139`, `61400071139` and
+`+61 400 071 139` all to `+61400071139`. Phone sign-in additionally needs
+**Authentication → Sign In / Providers → Phone** enabled in Supabase.
+
+### Granting school admin
+
+The console promotes an account that already exists rather than creating one —
+creating a user needs the service_role key, which must never reach the browser.
+The invitee signs up normally, then `/admin/settings` → **Grant School Admin**
+calls the `grant_school_admin` RPC, which checks the caller is a super_admin,
+flips the role, optionally attaches them to a school, and writes an
+`audit_log` row. `revoke_school_admin` reverses it.
+
 ## Conventions
 
 - **Design tokens live in `tailwind.config.js`.** Colours read out of the Figma file are named there (`ink`, `brand`, `teal`, `body`, `muted`, `line`…). Use the token, not a raw hex.

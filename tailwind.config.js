@@ -38,6 +38,9 @@ export default {
         // Educator app shell (1:495 and siblings)
         sidebar: "#14294B",
         sidebarmuted: "#B6C2D4",
+        // Super admin console (SU1 1:7565 and siblings) — its own rail navy
+        adminrail: "#1A365D",
+        adminpage: "#F8F9FA",
         // Auth portal frames (1:198, 186:1103) use their own greys
         authink: "#1A202C",
         authslate: "#64748B",

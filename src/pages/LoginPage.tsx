@@ -7,6 +7,7 @@ import {
   authRedirectUrl,
   NOT_CONFIGURED_NOTICE,
 } from "../lib/supabase";
+import { credentialsFor } from "../lib/authIdentifier";
 
 /** Figma: node 1:198 "Login Page" */
 
@@ -28,16 +29,25 @@ export default function LoginPage() {
     }
     setBusy(true);
     setNotice(null);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    setBusy(false);
+    const { data, error } = await supabase.auth.signInWithPassword(
+      credentialsFor(email, password),
+    );
     if (error) {
+      setBusy(false);
       setNotice({ kind: "error", text: error.message });
-    } else {
-      navigate("/");
+      return;
     }
+
+    // Land people where their role actually works. The profile row is the only
+    // place the role lives, so this needs a round trip before navigating.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", data.user.id)
+      .maybeSingle();
+
+    setBusy(false);
+    navigate(profile?.role === "super_admin" ? "/admin" : "/");
   }
 
   async function handleProvider(provider: "google" | "microsoft") {
@@ -75,18 +85,19 @@ export default function LoginPage() {
               htmlFor="email"
               className="text-base font-semibold leading-6 text-authink"
             >
-              Email Address
+              Email or Phone
             </label>
             <div className="relative">
               <MailIcon />
               <input
                 id="email"
-                type="email"
-                autoComplete="email"
+                type="text"
+                inputMode="email"
+                autoComplete="username"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@school.edu.au"
+                placeholder="you@school.edu.au or 0400 071 139"
                 className="h-12 w-full rounded-lg border border-line bg-white pl-11 pr-4 text-base text-authink placeholder:text-footext focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
               />
             </div>
