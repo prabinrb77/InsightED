@@ -1,5 +1,7 @@
-import { Link } from "react-router-dom";
-import { STUDENTS } from "../../data/students";
+import { useState } from "react";
+import BehaviourLogModal from "../../components/BehaviourLogModal";
+import type { Student } from "../../data/students";
+import { downloadStudentsCsv, getBehaviourLogs, getStudents } from "../../lib/educatorStore";
 
 /** Figma: node 1:495 "Classroom Overview Dashboard" */
 
@@ -68,7 +70,19 @@ function Sparkline({ trend }: { trend: keyof typeof TRENDS }) {
 }
 
 export default function DashboardPage() {
-  const visible = STUDENTS.slice(0, 4);
+  const [logging, setLogging] = useState<Student | null>(null);
+  const students = getStudents();
+  const visible = students.slice(0, 4);
+  const recentLogs = getBehaviourLogs().filter(
+    (log) => Date.now() - new Date(log.createdAt).getTime() < 86_400_000,
+  ).length;
+  const stats = STATS.map((stat) =>
+    stat.label === "Total Students"
+      ? { ...stat, value: String(students.length) }
+      : stat.label === "Recent Logs"
+        ? { ...stat, value: String(recentLogs).padStart(2, "0") }
+        : stat,
+  );
 
   return (
     <div className="px-4 py-8 md:px-8">
@@ -84,6 +98,7 @@ export default function DashboardPage() {
 
         <button
           type="button"
+          onClick={() => downloadStudentsCsv(students)}
           className="flex h-11 items-center gap-2 rounded-lg border border-line bg-white px-5 text-[15px] font-semibold text-ink transition-colors hover:bg-mist"
         >
           <span aria-hidden>⭳</span>
@@ -92,7 +107,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6 pt-6 md:grid-cols-3">
-        {STATS.map((s) => (
+        {stats.map((s) => (
           <article
             key={s.label}
             className="flex items-start justify-between gap-4 rounded-xl border border-line bg-white p-6"
@@ -165,20 +180,21 @@ export default function DashboardPage() {
             </p>
             <Sparkline trend={s.trend} />
 
-            <Link
-              to={`/app/students/${s.id}`}
+            <button
+              type="button"
+              onClick={() => setLogging(s)}
               className="mt-4 flex h-10 items-center justify-center rounded-lg border border-line bg-white text-sm font-semibold text-ink transition-colors hover:bg-mist"
             >
               Log Behavior
-            </Link>
+            </button>
           </article>
         ))}
       </div>
 
       <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6">
         <p className="text-sm text-muted">
-          Showing <strong className="font-bold text-ink">4</strong> of{" "}
-          <strong className="font-bold text-ink">24</strong> students
+          Showing <strong className="font-bold text-ink">{visible.length}</strong> of{" "}
+          <strong className="font-bold text-ink">{students.length}</strong> students
         </p>
         <nav aria-label="Student pages" className="flex items-center gap-2">
           <button
@@ -212,6 +228,12 @@ export default function DashboardPage() {
           </button>
         </nav>
       </div>
+      {logging && (
+        <BehaviourLogModal
+          student={logging}
+          onClose={() => setLogging(null)}
+        />
+      )}
     </div>
   );
 }

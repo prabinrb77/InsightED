@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { addStudent } from "../../lib/educatorStore";
 
 /** Figma: node 301:2163 "Add a new student" */
 
@@ -45,8 +46,15 @@ export default function AddStudentPage() {
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    // No student API yet — the roster is sample data from the Figma frames.
+    const data = new FormData(e.currentTarget as HTMLFormElement);
+    const student = addStudent({
+      first: String(data.get("first")),
+      last: String(data.get("last")),
+      grade: String(data.get("group") || "Grade 4"),
+      guardian: String(data.get("contact") || "Not provided"),
+    });
     setSaved(true);
+    window.setTimeout(() => navigate(`/app/students/${student.id}`), 500);
   }
 
   return (
@@ -78,13 +86,13 @@ export default function AddStudentPage() {
                 <label className={LABEL} htmlFor="first">
                   First Name <Req />
                 </label>
-                <input id="first" required placeholder="e.g. James" className={FIELD} />
+                <input id="first" name="first" required placeholder="e.g. James" className={FIELD} />
               </div>
               <div>
                 <label className={LABEL} htmlFor="last">
                   Last Name <Req />
                 </label>
-                <input id="last" required placeholder="e.g. Miller" className={FIELD} />
+                <input id="last" name="last" required placeholder="e.g. Miller" className={FIELD} />
               </div>
 
               <div>
@@ -101,13 +109,13 @@ export default function AddStudentPage() {
                     </span>
                   </span>
                 </div>
-                <input id="dob" type="date" required className={FIELD} />
+                <input id="dob" name="dob" type="date" required className={FIELD} />
               </div>
               <div>
                 <label className={LABEL} htmlFor="group">
                   Class / Group
                 </label>
-                <select id="group" className={FIELD} defaultValue="">
+                <select id="group" name="group" className={FIELD} defaultValue="">
                   <option value="">Select group...</option>
                   <option>Class 3</option>
                   <option>Class 4</option>
@@ -134,7 +142,7 @@ export default function AddStudentPage() {
                 <label className={LABEL} htmlFor="contact">
                   Contact Full Name
                 </label>
-                <input id="contact" placeholder="e.g. Robert Miller" className={FIELD} />
+                <input id="contact" name="contact" placeholder="e.g. Robert Miller" className={FIELD} />
               </div>
 
               <div>
@@ -304,8 +312,7 @@ export default function AddStudentPage() {
               role="status"
               className="rounded-lg border border-teal-border bg-teal-tint px-4 py-3 text-sm text-teal"
             >
-              Student records aren't connected to a backend yet — nothing was
-              saved.
+              Student saved. Opening the new profile…
             </p>
           )}
         </div>

@@ -1,6 +1,6 @@
 import { Link, Navigate, useParams } from "react-router-dom";
 import Avatar from "../../components/Avatar";
-import { findStudent } from "../../data/students";
+import { getStudents } from "../../lib/educatorStore";
 
 /** Figma: node 1:1006 "Student Profile Page" */
 
@@ -49,7 +49,7 @@ const TONES = {
 
 export default function StudentProfilePage() {
   const { id = "" } = useParams();
-  const student = findStudent(id);
+  const student = getStudents().find((item) => item.id === id);
   if (!student) return <Navigate to="/app/students" replace />;
 
   const strengths = ["Creative Problem Solving", "Visual Arts", "Math"];
@@ -124,12 +124,12 @@ export default function StudentProfilePage() {
               </ul>
             </div>
 
-            <button
-              type="button"
+            <Link
+              to="/app/messages"
               className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-brand text-base font-bold text-white transition-colors hover:bg-[#255d99]"
             >
               <span aria-hidden>✉</span> Message Guardian
-            </button>
+            </Link>
           </section>
 
           <section className="rounded-xl border border-line bg-white p-6">

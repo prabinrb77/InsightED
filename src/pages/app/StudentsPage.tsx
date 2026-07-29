@@ -1,11 +1,27 @@
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import Avatar from "../../components/Avatar";
-import { STUDENTS } from "../../data/students";
+import BehaviourLogModal from "../../components/BehaviourLogModal";
+import type { Student } from "../../data/students";
+import { downloadStudentsCsv, getStudents } from "../../lib/educatorStore";
 
 /** Figma: node 1:1370 "Student Directory" */
 
 export default function StudentsPage() {
-  const rows = STUDENTS.slice(4);
+  const [query, setQuery] = useState("");
+  const [logging, setLogging] = useState<Student | null>(null);
+  const students = getStudents();
+  const rows = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return needle
+      ? students.filter((student) =>
+          [student.full, student.studentId, student.guardian]
+            .join(" ")
+            .toLowerCase()
+            .includes(needle),
+        )
+      : students;
+  }, [query, students]);
 
   return (
     <div className="px-4 py-8 md:px-8">
@@ -15,13 +31,14 @@ export default function StudentsPage() {
             Student Directory
           </h1>
           <p className="pt-1 text-[15px] leading-6 text-muted">
-            24 Total Students
+            {students.length} Total Students
           </p>
         </div>
 
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
+            onClick={() => downloadStudentsCsv(students)}
             className="flex h-11 items-center gap-2 rounded-lg border border-line bg-white px-5 text-[15px] font-semibold text-ink transition-colors hover:bg-mist"
           >
             <span aria-hidden>⭳</span>
@@ -37,7 +54,17 @@ export default function StudentsPage() {
         </div>
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-xl border border-line bg-white">
+      <label className="mt-6 block max-w-md">
+        <span className="sr-only">Search the student directory</span>
+        <input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search students, IDs, or guardians…"
+          className="h-11 w-full rounded-lg border border-line bg-white px-4 text-sm text-ink placeholder:text-footext focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+        />
+      </label>
+
+      <div className="mt-4 overflow-x-auto rounded-xl border border-line bg-white">
         <table className="w-full min-w-[860px] border-collapse text-left">
           <thead>
             <tr className="border-b border-line">
@@ -102,6 +129,7 @@ export default function StudentsPage() {
                     </Link>
                     <button
                       type="button"
+                      onClick={() => setLogging(s)}
                       className="flex h-9 items-center rounded-lg border border-brand bg-white px-4 text-sm font-semibold text-brand transition-colors hover:bg-mist"
                     >
                       Quick Log
@@ -113,6 +141,17 @@ export default function StudentsPage() {
           </tbody>
         </table>
       </div>
+      {rows.length === 0 && (
+        <p className="py-12 text-center text-sm text-muted">
+          No students match “{query}”.
+        </p>
+      )}
+      {logging && (
+        <BehaviourLogModal
+          student={logging}
+          onClose={() => setLogging(null)}
+        />
+      )}
     </div>
   );
 }
