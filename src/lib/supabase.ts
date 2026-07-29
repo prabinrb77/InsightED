@@ -2,6 +2,16 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+export const AUTHORIZED_EDUCATOR_EMAIL = (
+  (import.meta.env.VITE_AUTHORIZED_EDUCATOR_EMAIL as string | undefined) ??
+  "sarah.jenkins@school.edu.au"
+)
+  .trim()
+  .toLowerCase();
+
+export function isAuthorizedEducatorEmail(email: string) {
+  return email.trim().toLowerCase() === AUTHORIZED_EDUCATOR_EMAIL;
+}
 
 /**
  * Null until VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are set (in .env.local

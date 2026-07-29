@@ -71,8 +71,13 @@ function Sparkline({ trend }: { trend: keyof typeof TRENDS }) {
 
 export default function DashboardPage() {
   const [logging, setLogging] = useState<Student | null>(null);
+  const [studentPage, setStudentPage] = useState(1);
   const students = getStudents();
-  const visible = students.slice(0, 4);
+  const pageSize = 4;
+  const pageCount = Math.max(1, Math.ceil(students.length / pageSize));
+  const activePage = Math.min(studentPage, pageCount);
+  const pageStart = (activePage - 1) * pageSize;
+  const visible = students.slice(pageStart, pageStart + pageSize);
   const recentLogs = getBehaviourLogs().filter(
     (log) => Date.now() - new Date(log.createdAt).getTime() < 86_400_000,
   ).length;
@@ -193,36 +198,46 @@ export default function DashboardPage() {
 
       <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6">
         <p className="text-sm text-muted">
-          Showing <strong className="font-bold text-ink">{visible.length}</strong> of{" "}
+          Showing{" "}
+          <strong className="font-bold text-ink">
+            {students.length ? pageStart + 1 : 0}–{pageStart + visible.length}
+          </strong>{" "}
+          of{" "}
           <strong className="font-bold text-ink">{students.length}</strong> students
         </p>
         <nav aria-label="Student pages" className="flex items-center gap-2">
           <button
             type="button"
             aria-label="Previous page"
-            className="flex size-9 items-center justify-center rounded-lg border border-line bg-white text-muted hover:bg-mist"
+            disabled={activePage === 1}
+            onClick={() => setStudentPage((page) => Math.max(1, page - 1))}
+            className="flex size-9 items-center justify-center rounded-lg border border-line bg-white text-muted hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
           >
             ‹
           </button>
-          {["1", "2", "3"].map((p) => (
+          {Array.from({ length: pageCount }, (_, index) => index + 1).map((page) => (
             <button
-              key={p}
+              key={page}
               type="button"
-              aria-current={p === "1" ? "page" : undefined}
+              onClick={() => setStudentPage(page)}
+              aria-current={page === activePage ? "page" : undefined}
+              aria-label={`Student page ${page}`}
               className={[
                 "flex size-9 items-center justify-center rounded-lg text-sm font-semibold",
-                p === "1"
+                page === activePage
                   ? "bg-brand text-white"
                   : "border border-line bg-white text-ink hover:bg-mist",
               ].join(" ")}
             >
-              {p}
+              {page}
             </button>
           ))}
           <button
             type="button"
             aria-label="Next page"
-            className="flex size-9 items-center justify-center rounded-lg border border-line bg-white text-muted hover:bg-mist"
+            disabled={activePage === pageCount}
+            onClick={() => setStudentPage((page) => Math.min(pageCount, page + 1))}
+            className="flex size-9 items-center justify-center rounded-lg border border-line bg-white text-muted hover:bg-mist disabled:cursor-not-allowed disabled:opacity-40"
           >
             ›
           </button>

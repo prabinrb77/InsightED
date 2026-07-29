@@ -8,6 +8,8 @@ export type MessageItem = {
   senderId: string;
   createdAt: string;
   pending?: boolean;
+  attachmentUrl?: string;
+  attachmentName?: string;
 };
 
 export type MessageThread = {
@@ -25,12 +27,35 @@ type StoreState = {
   loading: boolean;
   error: string | null;
   isDemo: boolean;
-  sendMessage: (conversationId: string, body: string) => Promise<boolean>;
+  sendMessage: (
+    conversationId: string,
+    body: string,
+    attachment?: File | null,
+  ) => Promise<boolean>;
   markRead: (conversationId: string) => Promise<void>;
 };
 
 const DEMO_USER_ID = "demo-educator";
 const STORAGE_KEY = "mizanova-message-demo-v2";
+const IMAGE_MARKER = /\n?\[\[image:(.*?)\|(.*?)\]\]$/;
+
+function unpackBody(raw: string) {
+  const match = raw.match(IMAGE_MARKER);
+  return {
+    body: raw.replace(IMAGE_MARKER, "").trim(),
+    attachmentUrl: match?.[1],
+    attachmentName: match?.[2],
+  };
+}
+
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
 
 const DEMO_THREADS: MessageThread[] = [
   {
@@ -205,12 +230,15 @@ export default function useMessages(session: Session | null): StoreState {
         lastReadAt: readMap.get(conversation.id as string) ?? null,
         messages: messages
           .filter((message) => message.conversation_id === conversation.id)
-          .map((message) => ({
-            id: message.id as string,
-            body: message.body as string,
-            senderId: message.sender_id as string,
-            createdAt: message.created_at as string,
-          })),
+          .map((message) => {
+            const content = unpackBody(message.body as string);
+            return {
+              id: message.id as string,
+              ...content,
+              senderId: message.sender_id as string,
+              createdAt: message.created_at as string,
+            };
+          }),
       };
     });
 
@@ -246,15 +274,49 @@ export default function useMessages(session: Session | null): StoreState {
   }, [loadRemote, session]);
 
   const sendMessage = useCallback(
-    async (conversationId: string, rawBody: string) => {
+    async (
+      conversationId: string,
+      rawBody: string,
+      attachment?: File | null,
+    ) => {
       const body = rawBody.trim();
-      if (!body) return false;
+      if (!body && !attachment) return false;
+      let attachmentUrl: string | undefined;
+      let attachmentName: string | undefined;
+
+      if (attachment) {
+        attachmentName = attachment.name;
+        if (isDemo) {
+          attachmentUrl = await fileToDataUrl(attachment);
+        } else {
+          const safeName = attachment.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+          const path = `${conversationId}/${crypto.randomUUID()}-${safeName}`;
+          const { error: uploadError } = await supabase!.storage
+            .from("message-attachments")
+            .upload(path, attachment, { contentType: attachment.type });
+          if (uploadError) {
+            setError(`Image upload failed: ${uploadError.message}`);
+            return false;
+          }
+          const { data: signed, error: signedError } = await supabase!.storage
+            .from("message-attachments")
+            .createSignedUrl(path, 60 * 60 * 24 * 365);
+          if (signedError) {
+            setError(`Image link failed: ${signedError.message}`);
+            return false;
+          }
+          attachmentUrl = signed.signedUrl;
+        }
+      }
+
       const optimistic: MessageItem = {
         id: `pending-${Date.now()}`,
         senderId: userId,
         body,
         createdAt: new Date().toISOString(),
         pending: !isDemo,
+        attachmentUrl,
+        attachmentName,
       };
       setThreads((current) =>
         current.map((thread) =>
@@ -275,7 +337,7 @@ export default function useMessages(session: Session | null): StoreState {
       const { error: sendError } = await supabase!.from("messages").insert({
         conversation_id: conversationId,
         sender_id: userId,
-        body,
+        body: `${body}${attachmentUrl ? `\n[[image:${attachmentUrl}|${attachmentName}]]` : ""}`,
       });
       if (sendError) {
         setThreads((current) =>

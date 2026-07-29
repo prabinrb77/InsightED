@@ -4,8 +4,9 @@ import AuthLayout from "../components/AuthLayout";
 import { GoogleLogo, MicrosoftLogo } from "../components/SocialAuthButtons";
 import {
   supabase,
-  authRedirectUrl,
   NOT_CONFIGURED_NOTICE,
+  AUTHORIZED_EDUCATOR_EMAIL,
+  isAuthorizedEducatorEmail,
 } from "../lib/supabase";
 
 /** Figma: node 1:198 "Login Page" */
@@ -22,8 +23,18 @@ export default function LoginPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!isAuthorizedEducatorEmail(email)) {
+      setNotice({
+        kind: "error",
+        text: "This educator portal is private. Only the approved educator email can sign in.",
+      });
+      return;
+    }
     if (!supabase) {
-      setNotice({ kind: "info", text: NOT_CONFIGURED_NOTICE });
+      setNotice({
+        kind: "info",
+        text: `${NOT_CONFIGURED_NOTICE} Approved educator: ${AUTHORIZED_EDUCATOR_EMAIL}`,
+      });
       return;
     }
     setBusy(true);
@@ -41,20 +52,10 @@ export default function LoginPage() {
   }
 
   async function handleProvider(provider: "google" | "microsoft") {
-    if (!supabase) {
-      setNotice({ kind: "info", text: NOT_CONFIGURED_NOTICE });
-      return;
-    }
-    setNotice(null);
-    const { error } = await supabase.auth.signInWithOAuth({
-      // Supabase's name for Microsoft sign-in is "azure"
-      provider: provider === "microsoft" ? "azure" : "google",
-      options: {
-        redirectTo: authRedirectUrl(),
-        ...(provider === "microsoft" ? { scopes: "email" } : {}),
-      },
+    setNotice({
+      kind: "info",
+      text: `For privacy, educator access currently uses the approved email and password only. ${provider === "google" ? "Google" : "Microsoft"} sign-in is disabled.`,
     });
-    if (error) setNotice({ kind: "error", text: error.message });
   }
 
   return (
@@ -86,7 +87,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@school.edu.au"
+                placeholder={AUTHORIZED_EDUCATOR_EMAIL}
                 className="h-12 w-full rounded-lg border border-line bg-white pl-11 pr-4 text-base text-authink placeholder:text-footext focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
               />
             </div>

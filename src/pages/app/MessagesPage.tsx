@@ -52,9 +52,22 @@ export default function MessagesPage() {
   const [search, setSearch] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [showConversation, setShowConversation] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!attachment) {
+      setAttachmentPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(attachment);
+    setAttachmentPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [attachment]);
 
   useEffect(() => {
     if (!activeId && threads[0]) setActiveId(threads[0].id);
@@ -87,12 +100,17 @@ export default function MessagesPage() {
 
   async function handleSend(event?: FormEvent) {
     event?.preventDefault();
-    if (!active || !draft.trim() || sending) return;
+    if (!active || (!draft.trim() && !attachment) || sending) return;
     const message = draft;
+    const image = attachment;
     setDraft("");
+    setAttachment(null);
     setSending(true);
-    const sent = await sendMessage(active.id, message);
-    if (!sent) setDraft(message);
+    const sent = await sendMessage(active.id, message, image);
+    if (!sent) {
+      setDraft(message);
+      setAttachment(image);
+    }
     setSending(false);
   }
 
@@ -289,14 +307,32 @@ export default function MessagesPage() {
                         <div className="max-w-[min(560px,85%)]">
                           <div
                             className={[
-                              "whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-sm leading-6",
+                              "overflow-hidden rounded-2xl text-sm leading-6",
                               mine
                                 ? "rounded-br-md bg-brand text-white"
                                 : "rounded-bl-md border border-line bg-white text-ink",
                               message.pending ? "opacity-70" : "",
                             ].join(" ")}
                           >
-                            {message.body}
+                            {message.attachmentUrl && (
+                              <a
+                                href={message.attachmentUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="block bg-white"
+                              >
+                                <img
+                                  src={message.attachmentUrl}
+                                  alt={message.attachmentName || "Shared photo"}
+                                  className="max-h-80 w-full object-cover"
+                                />
+                              </a>
+                            )}
+                            {message.body && (
+                              <p className="whitespace-pre-wrap break-words px-4 py-2.5">
+                                {message.body}
+                              </p>
+                            )}
                           </div>
                           <p className={`mt-1 text-[11px] text-muted ${mine ? "text-right" : "text-left"}`}>
                             {formatMessageTime(message.createdAt)}
@@ -311,7 +347,37 @@ export default function MessagesPage() {
               </div>
 
               <form onSubmit={handleSend} className="shrink-0 border-t border-line bg-white px-4 py-4 md:px-6">
+                {attachmentPreview && (
+                  <div className="mx-auto mb-3 flex max-w-3xl items-center gap-3 rounded-xl border border-line bg-mist p-2">
+                    <img src={attachmentPreview} alt="Photo ready to send" className="size-16 rounded-lg object-cover" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-ink">{attachment?.name}</p>
+                      <p className="text-xs text-muted">Ready to send</p>
+                    </div>
+                    <button type="button" onClick={() => setAttachment(null)} className="flex size-9 items-center justify-center rounded-lg text-xl text-muted hover:bg-white" aria-label="Remove attached photo">
+                      ×
+                    </button>
+                  </div>
+                )}
                 <div className="mx-auto flex max-w-3xl items-end gap-3">
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="sr-only"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] ?? null;
+                      if (file && file.size > 5 * 1024 * 1024) {
+                        event.target.value = "";
+                        window.alert("Please choose an image smaller than 5 MB.");
+                        return;
+                      }
+                      setAttachment(file);
+                    }}
+                  />
+                  <button type="button" onClick={() => fileRef.current?.click()} className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-line bg-white text-xl text-brand hover:bg-mist" aria-label="Attach a photo" title="Attach a photo">
+                    📷
+                  </button>
                   <label className="flex-1">
                     <span className="sr-only">Message</span>
                     <textarea
@@ -326,7 +392,7 @@ export default function MessagesPage() {
                   </label>
                   <button
                     type="submit"
-                    disabled={!draft.trim() || sending}
+                    disabled={(!draft.trim() && !attachment) || sending}
                     className="flex h-12 shrink-0 items-center justify-center rounded-xl bg-brand px-5 text-sm font-semibold text-white transition hover:bg-[#255d99] disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {sending ? "Sending…" : "Send"}
