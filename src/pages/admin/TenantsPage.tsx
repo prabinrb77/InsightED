@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { PageHeading, useTopbarAction } from "../../components/SuperAdminLayout";
 import {
   Badge,
@@ -8,7 +8,7 @@ import {
   StatusPill,
   UsageBar,
 } from "../../components/adminBits";
-import { supabase } from "../../lib/supabase";
+import { supabase, NOT_CONFIGURED_NOTICE } from "../../lib/supabase";
 
 /** Figma: node 1:7857 "SU2-Tenant Management" */
 
@@ -81,44 +81,50 @@ const MONO_TONE = ["blue", "purple", "orange", "green", "amber"] as const;
 
 export default function TenantsPage() {
   const [live, setLive] = useState<District[]>([]);
+  const [provisionOpen, setProvisionOpen] = useState(false);
 
   useTopbarAction(
     <button
       type="button"
-      className="hidden items-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#245A94] sm:inline-flex"
+      onClick={() => setProvisionOpen(true)}
+      className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-brand px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#245A94] sm:px-4"
     >
       <PlusIcon />
-      Provision New District
+      {/* The label is the first thing to go when the bar is tight, but the
+          action itself must stay reachable — it's the only way to add a
+          district. */}
+      <span className="hidden sm:inline">Provision New District</span>
+      <span className="sr-only sm:hidden">Provision New District</span>
     </button>,
   );
 
-  useEffect(() => {
+  async function loadSchools() {
     if (!supabase) return;
-    let cancelled = false;
-    supabase
+    const { data } = await supabase
       .from("schools")
       .select("id, name, created_at")
       .order("created_at", { ascending: false })
-      .limit(25)
-      .then(({ data }) => {
-        if (cancelled || !data) return;
-        setLive(
-          data.map((s) => ({
-            id: s.id,
-            name: s.name,
-            code: `DIST-${s.id.slice(0, 5).toUpperCase()}`,
-            tier: "PRO" as Tier,
-            used: 0,
-            seats: 500,
-            renewal: "—",
-            renewalNote: `Onboarded ${new Date(s.created_at).toLocaleDateString()}`,
-            health: "Optimal" as const,
-          })),
-        );
-      });
-    return () => {
-      cancelled = true;
-    };
+      .limit(25);
+    if (data) {
+      setLive(
+        data.map((s) => ({
+          id: s.id,
+          name: s.name,
+          code: `DIST-${s.id.slice(0, 5).toUpperCase()}`,
+          tier: "PRO" as Tier,
+          used: 0,
+          seats: 500,
+          renewal: "—",
+          renewalNote: `Onboarded ${new Date(s.created_at).toLocaleDateString()}`,
+          health: "Optimal" as const,
+        })),
+      );
+    }
+  }
+
+  useEffect(() => {
+    loadSchools();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const rows = [...SEED, ...live];
@@ -275,7 +281,147 @@ export default function TenantsPage() {
           </nav>
         </div>
       </Panel>
+
+      {provisionOpen && (
+        <ProvisionDistrictDialog
+          onClose={() => setProvisionOpen(false)}
+          onCreated={() => {
+            setProvisionOpen(false);
+            loadSchools();
+          }}
+        />
+      )}
     </>
+  );
+}
+
+/* ── provision a district ──────────────────────────────────── */
+
+/**
+ * Writes a real `schools` row. Gated by the schools_admin_insert policy from
+ * migration 0002, so a non-super_admin gets a permission error from Postgres
+ * rather than a silent no-op.
+ */
+function ProvisionDistrictDialog({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [country, setCountry] = useState("Australia");
+  const [residency, setResidency] = useState("AWS Sydney");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!supabase) {
+      setError(NOT_CONFIGURED_NOTICE);
+      return;
+    }
+    setBusy(true);
+    setError(null);
+
+    const { error: insertError } = await supabase.from("schools").insert({
+      name: name.trim(),
+      country,
+      data_residency: residency,
+    });
+
+    setBusy(false);
+    if (insertError) {
+      setError(
+        /row-level security/i.test(insertError.message)
+          ? "Your account isn't allowed to create districts. Super admin access is required."
+          : insertError.message,
+      );
+      return;
+    }
+    onCreated();
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="provision-title"
+    >
+      <div className="w-full max-w-[480px] rounded-xl bg-white p-6 shadow-card">
+        <h2 id="provision-title" className="text-xl font-bold leading-7 text-ink">
+          Provision a new district
+        </h2>
+        <p className="mt-1 text-sm leading-5 text-body">
+          Creates the school record. You can attach a school admin to it from
+          Settings once the person has an account.
+        </p>
+
+        <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-4">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-semibold text-subtle">District name</span>
+            <input
+              required
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Lincoln County Schools"
+              className="h-11 rounded-lg border border-line px-3 text-sm text-ink placeholder:text-footext focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+            />
+          </label>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-semibold text-subtle">Country</span>
+              <input
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                className="h-11 rounded-lg border border-line px-3 text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-semibold text-subtle">Data residency</span>
+              <select
+                value={residency}
+                onChange={(e) => setResidency(e.target.value)}
+                className="h-11 rounded-lg border border-line bg-white px-3 text-sm text-ink focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
+              >
+                <option>AWS Sydney</option>
+                <option>AWS Melbourne</option>
+                <option>AWS Singapore</option>
+              </select>
+            </label>
+          </div>
+
+          {error && (
+            <p
+              role="alert"
+              className="rounded-lg bg-[#FEE2E2] px-3 py-2 text-sm text-[#B91C1C]"
+            >
+              {error}
+            </p>
+          )}
+
+          <div className="mt-1 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-line px-4 py-2.5 text-sm font-semibold text-subtle hover:bg-mist"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={busy}
+              className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#245A94] disabled:opacity-60"
+            >
+              {busy ? "Creating…" : "Create district"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }
 

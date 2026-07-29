@@ -7,7 +7,8 @@ import type { UserRole } from "../../hooks/useProfile";
 
 /** Figma: node 1:9540 "Settings & RBAC Dashboard" */
 
-type RoleKey = "super_admin" | "school_admin" | "specialist" | "billing";
+/** The three admin tiers from spec Prompt 6, plus the specialist review role. */
+type RoleKey = "super_admin" | "platform_admin" | "school_admin" | "specialist";
 
 const ROLES: {
   key: RoleKey;
@@ -15,10 +16,10 @@ const ROLES: {
   blurb: string;
   glyph: JSX.Element;
 }[] = [
-  { key: "super_admin", name: "Super Admin", blurb: "Full platform access", glyph: <CrownGlyph /> },
-  { key: "school_admin", name: "School Admin", blurb: "District & staff management", glyph: <SchoolGlyph /> },
+  { key: "super_admin", name: "Super Admin", blurb: "Technical root control — internal only", glyph: <CrownGlyph /> },
+  { key: "platform_admin", name: "Platform Admin", blurb: "Business operations — Special Miles team", glyph: <ReceiptGlyph /> },
+  { key: "school_admin", name: "School Admin", blurb: "Institution-level oversight", glyph: <SchoolGlyph /> },
   { key: "specialist", name: "Specialist", blurb: "Clinical & caseload access", glyph: <FlaskGlyph /> },
-  { key: "billing", name: "Billing Operations", blurb: "Invoice & subscription management", glyph: <ReceiptGlyph /> },
 ];
 
 const PERMISSIONS: Record<RoleKey, { scope: string; description: string; on: boolean }[]> = {
@@ -28,21 +29,22 @@ const PERMISSIONS: Record<RoleKey, { scope: string; description: string; on: boo
     { scope: "Push AI Model Updates", description: "Trigger production deployments for core LLM inference logic.", on: true },
     { scope: "Impersonate Users", description: "Login as any customer user for support and troubleshooting.", on: true },
   ],
+  platform_admin: [
+    { scope: "Manage Users", description: "Approve, suspend and deactivate teachers across all schools.", on: true },
+    { scope: "Manage Schools", description: "Create and edit schools, assign school admins, set subscription tier.", on: true },
+    { scope: "View Financials", description: "Read-only Stripe: subscriptions, revenue, refunds, GST reporting.", on: true },
+    { scope: "Feature Flags", description: "System-wide toggles are super admin only — platform admin cannot reach infrastructure.", on: false },
+  ],
   school_admin: [
     { scope: "Manage Staff", description: "Invite, suspend and remove teachers within their own school.", on: true },
     { scope: "View Safeguarding Log", description: "Read break-glass audit entries recorded for their school.", on: true },
-    { scope: "Export Student Data", description: "Download rosters and behaviour histories for their school.", on: true },
+    { scope: "Export Student Data", description: "Download anonymised rosters and behaviour trends for their school.", on: true },
     { scope: "View Financials", description: "Access to Stripe logs, revenue dashboards, and ARR reporting.", on: false },
   ],
   specialist: [
     { scope: "Clinical Notes", description: "Read and write high-clearance notes on linked students.", on: true },
     { scope: "Endorse Strategies", description: "Approve or reject AI-suggested strategies before use.", on: true },
     { scope: "Manage Staff", description: "Invite, suspend and remove teachers within their own school.", on: false },
-  ],
-  billing: [
-    { scope: "View Financials", description: "Access to Stripe logs, revenue dashboards, and ARR reporting.", on: true },
-    { scope: "Issue Refunds", description: "Reverse charges and credit district accounts.", on: true },
-    { scope: "Delete Tenant Data", description: "Allows permanent removal of customer database records and backups.", on: false },
   ],
 };
 
@@ -64,12 +66,11 @@ export default function AdminAccessPage() {
   const [inviteOpen, setInviteOpen] = useState(false);
 
   const role = ROLES.find((r) => r.key === selected)!;
-  // "billing" is a console-side grouping, not one of the DB user_role values,
-  // so there is no roster to load for it.
-  const dbRole = selected === "billing" ? null : (selected as UserRole);
+  // Every tier here maps to a real user_role value, so each has a roster.
+  const dbRole: UserRole = selected;
 
   async function loadPeople() {
-    if (!supabase || !dbRole) {
+    if (!supabase) {
       setPeople([]);
       return;
     }
@@ -255,9 +256,7 @@ export default function AdminAccessPage() {
                   <td colSpan={4} className="px-6 py-10 text-center text-sm text-muted">
                     {!supabase
                       ? NOT_CONFIGURED_NOTICE
-                      : dbRole
-                        ? `No accounts hold the ${role.name} role yet.`
-                        : "This grouping is managed outside the app."}
+                      : `No accounts hold the ${role.name} role yet.`}
                   </td>
                 </tr>
               ) : (

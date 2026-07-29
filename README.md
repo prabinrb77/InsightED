@@ -169,15 +169,37 @@ actually grants a super_admin read access.
 ### Creating the first super admin
 
 Roles can't be self-assigned: `handle_new_user()` refuses `school_admin` and
-`super_admin` claims from signup metadata. So the first one is made by hand —
-follow [`supabase/seed_super_admin.sql`](supabase/seed_super_admin.sql), which
-creates the account through the Admin API (service_role key, from a terminal —
-never the browser) and then promotes it.
+`super_admin` claims from signup metadata. So the first one is made by hand.
+Run the migrations, then:
+
+```bash
+SUPABASE_URL=https://xxxx.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=eyJ... \
+node scripts/create-super-admin.mjs
+```
+
+It creates the account through the Admin API with `phone_confirm: true` (no SMS
+sent, so no Twilio spend) and promotes the profile to `super_admin`. Re-running
+it repairs an existing account rather than duplicating it. The service_role key
+bypasses every RLS policy — keep it out of the repo, out of the browser, and
+never give it a `VITE_` prefix.
+
+`node scripts/check-auth-setup.mjs` reports which providers are live and probes
+phone sign-in, so a failing login can be traced to a setting instead of guessed
+at. [`supabase/seed_super_admin.sql`](supabase/seed_super_admin.sql) is the
+manual SQL equivalent.
 
 Sign-in accepts a phone number or an email in the same field;
 `src/lib/authIdentifier.ts` normalises `0400071139`, `61400071139` and
 `+61 400 071 139` all to `+61400071139`. Phone sign-in additionally needs
 **Authentication → Sign In / Providers → Phone** enabled in Supabase.
+
+### Creating schools
+
+`/admin/tenants` → **Provision New District** inserts a real `schools` row,
+gated by the `schools_admin_insert` policy. The commercial columns in that table
+— tier, seats, renewal, health — don't exist in the schema yet, so seeded rows
+stand in for them and real schools appear beneath with those fields blank.
 
 ### Granting school admin
 

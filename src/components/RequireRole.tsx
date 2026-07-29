@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
-import useProfile, { UserRole } from "../hooks/useProfile";
+import useProfile, { UserRole, heldRoles } from "../hooks/useProfile";
 import { supabase } from "../lib/supabase";
 
 /**
@@ -27,7 +27,9 @@ export default function RequireRole({
   if (!supabase) return <>{children}</>;
   if (loading) return <GuardSplash />;
   if (!session) return <Navigate to="/login" replace />;
-  if (!profile || !allow.includes(profile.role)) {
+  // Checked against every role held, not just the primary one, so a teacher
+  // who is also a parent isn't locked out of either area.
+  if (!heldRoles(profile).some((r) => allow.includes(r))) {
     return <Navigate to="/app" replace />;
   }
   return <>{children}</>;
