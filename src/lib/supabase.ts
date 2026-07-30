@@ -1,7 +1,14 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+
+/**
+ * Supabase is migrating from `anon` JWT keys to shorter `sb_publishable_…` ones,
+ * and the dashboard's Connect panel now emits the new name. Accept either so the
+ * project works whichever the dashboard hands you.
+ */
+const anonKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+  import.meta.env.VITE_SUPABASE_ANON_KEY) as string | undefined;
 
 /**
  * Null until VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are set (in .env.local

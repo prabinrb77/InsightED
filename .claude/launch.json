@@ -3,13 +3,17 @@
   "configurations": [
     {
       "name": "web",
-      "runtimeExecutable": "zsh",
+      "runtimeExecutable": "npm",
       "runtimeArgs": [
-        "-c",
-        "export NVM_DIR=\"$HOME/.nvm\"; . \"$NVM_DIR/nvm.sh\"; npm run dev -- --host --port \"${PORT:-5173}\" --strictPort"
+        "run",
+        "dev",
+        "--",
+        "--host",
+        "--port",
+        "5173",
+        "--strictPort"
       ],
-      "port": 5173,
-      "autoPort": true
+      "port": 5173
     }
   ]
 }
