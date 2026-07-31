@@ -15,6 +15,9 @@ export const AUTHORIZED_EDUCATOR_EMAIL = (
   .trim()
   .toLowerCase();
 
+/** Presentation-only credential used when no Supabase project is configured. */
+export const DEMO_EDUCATOR_PASSWORD = "Educator123!";
+
 export function isAuthorizedEducatorEmail(email: string) {
   return email.trim().toLowerCase() === AUTHORIZED_EDUCATOR_EMAIL;
 }

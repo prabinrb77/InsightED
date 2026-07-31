@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import BehaviourLogModal from "../../components/BehaviourLogModal";
 import type { Student } from "../../data/students";
 import { downloadStudentsCsv, getBehaviourLogs, getStudents } from "../../lib/educatorStore";
@@ -12,6 +13,7 @@ const STATS = [
     chip: "bg-[#DBEAFE] text-brand",
     icon: "👥",
     note: null,
+    to: "/app/students",
   },
   {
     label: "Recent Logs",
@@ -19,6 +21,7 @@ const STATS = [
     chip: "bg-[#FEF3C7] text-amber",
     icon: "📋",
     note: "In the last 24 hours",
+    to: "/app/activity",
   },
   {
     label: "Critical Alerts",
@@ -26,6 +29,7 @@ const STATS = [
     chip: "bg-[#FEE2E2] text-red-500",
     icon: "⚠️",
     note: "clear",
+    to: "/app/activity",
   },
 ];
 
@@ -113,9 +117,10 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 pt-6 md:grid-cols-3">
         {stats.map((s) => (
-          <article
+          <Link
             key={s.label}
-            className="flex items-start justify-between gap-4 rounded-xl border border-line bg-white p-6"
+            to={s.to}
+            className="flex items-start justify-between gap-4 rounded-xl border border-line bg-white p-6 transition hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-card"
           >
             <div>
               <p className="text-[11px] font-bold uppercase leading-4 tracking-[0.6px] text-muted">
@@ -140,9 +145,35 @@ export default function DashboardPage() {
             >
               {s.icon}
             </span>
-          </article>
+          </Link>
         ))}
       </div>
+
+      <section className="pt-6" aria-labelledby="quick-actions-title">
+        <h2 id="quick-actions-title" className="sr-only">Quick actions</h2>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            { to: "/app/students/new", title: "Add student", body: "Create a student profile", icon: "＋" },
+            { to: "/app/messages", title: "Message family", body: "Continue a secure conversation", icon: "✉" },
+            { to: "/app/schedule", title: "View today", body: "Open your classroom agenda", icon: "◷" },
+            { to: "/app/activity", title: "Review logs", body: "See recent behaviour activity", icon: "↗" },
+          ].map((action) => (
+            <Link
+              key={action.to}
+              to={action.to}
+              className="flex items-center gap-3 rounded-xl border border-line bg-white px-4 py-3 hover:border-brand/40 hover:bg-mist"
+            >
+              <span aria-hidden className="flex size-9 items-center justify-center rounded-lg bg-[#EFF6FF] font-bold text-brand">
+                {action.icon}
+              </span>
+              <span>
+                <span className="block text-sm font-bold text-ink">{action.title}</span>
+                <span className="block text-xs text-muted">{action.body}</span>
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
 
       <div className="flex flex-wrap items-center justify-between gap-3 pt-10">
         <h2 className="text-xl font-bold tracking-[-0.3px] text-ink">
@@ -167,7 +198,9 @@ export default function DashboardPage() {
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 text-center">
                 <h3 className="text-base font-bold leading-6 text-ink">
-                  {s.short}
+                  <Link to={`/app/students/${s.id}`} className="hover:text-brand">
+                    {s.short}
+                  </Link>
                 </h3>
                 <p className="text-xs leading-4 text-muted">ID: #{s.code}</p>
               </div>

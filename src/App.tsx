@@ -22,6 +22,7 @@ import StudentProfilePage from "./pages/app/StudentProfilePage";
 import MessagesPage from "./pages/app/MessagesPage";
 import SchedulePage from "./pages/app/SchedulePage";
 import AppSettingsPage from "./pages/app/AppSettingsPage";
+import ActivityPage from "./pages/app/ActivityPage";
 import SuperAdminLayout from "./components/SuperAdminLayout";
 import RequireRole from "./components/RequireRole";
 import SuperDashboardPage from "./pages/admin/SuperDashboardPage";
@@ -42,11 +43,19 @@ export default function App() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* Educator app — dark rail shell */}
-      <Route path="/app" element={<AppLayout />}>
+      <Route
+        path="/app"
+        element={
+          <RequireRole allow={["teacher", "external_teacher", "school_admin"]}>
+            <AppLayout />
+          </RequireRole>
+        }
+      >
         <Route index element={<DashboardPage />} />
         <Route path="students" element={<StudentsPage />} />
         <Route path="students/new" element={<AddStudentPage />} />
         <Route path="students/:id" element={<StudentProfilePage />} />
+        <Route path="activity" element={<ActivityPage />} />
         <Route path="messages" element={<MessagesPage />} />
         <Route path="schedule" element={<SchedulePage />} />
         <Route path="settings" element={<AppSettingsPage />} />

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import Avatar from "../../components/Avatar";
 import BehaviourLogModal from "../../components/BehaviourLogModal";
 import type { Student } from "../../data/students";
@@ -8,7 +8,8 @@ import { downloadStudentsCsv, getStudents } from "../../lib/educatorStore";
 /** Figma: node 1:1370 "Student Directory" */
 
 export default function StudentsPage() {
-  const [query, setQuery] = useState("");
+  const [searchParams] = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get("search") ?? "");
   const [logging, setLogging] = useState<Student | null>(null);
   const students = getStudents();
   const rows = useMemo(() => {

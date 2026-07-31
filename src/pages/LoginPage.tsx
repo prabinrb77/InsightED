@@ -4,8 +4,7 @@ import AuthLayout from "../components/AuthLayout";
 import { GoogleLogo, MicrosoftLogo } from "../components/SocialAuthButtons";
 import {
   supabase,
-  NOT_CONFIGURED_NOTICE,
-  AUTHORIZED_EDUCATOR_EMAIL,
+  DEMO_EDUCATOR_PASSWORD,
   isAuthorizedEducatorEmail,
 } from "../lib/supabase";
 import { credentialsFor } from "../lib/authIdentifier";
@@ -32,10 +31,14 @@ export default function LoginPage() {
       return;
     }
     if (!supabase) {
-      setNotice({
-        kind: "info",
-        text: `${NOT_CONFIGURED_NOTICE} Approved educator: ${AUTHORIZED_EDUCATOR_EMAIL}`,
-      });
+      if (password !== DEMO_EDUCATOR_PASSWORD) {
+        setNotice({
+          kind: "error",
+          text: "Incorrect password for the presentation educator account.",
+        });
+        return;
+      }
+      navigate("/app");
       return;
     }
     setBusy(true);
@@ -58,7 +61,7 @@ export default function LoginPage() {
       .maybeSingle();
 
     setBusy(false);
-    navigate(profile?.role === "super_admin" ? "/admin" : "/");
+    navigate(profile?.role === "super_admin" ? "/admin" : "/app");
   }
 
   async function handleProvider(provider: "google" | "microsoft") {

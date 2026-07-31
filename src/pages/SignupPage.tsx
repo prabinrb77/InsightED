@@ -17,6 +17,12 @@ const PATHS = [
     to: "/signup/teacher",
   },
   {
+    icon: iconTeacher,
+    role: "Educator",
+    body: "Access your private educator dashboard to manage students, message families, schedule activities, and record updates.",
+    to: "/login",
+  },
+  {
     icon: iconParent,
     role: "Parent",
     body: "Sign up to support your child. You can join your child's school if they're already on MiZanova, or start independently.",
@@ -51,7 +57,7 @@ export default function SignupPage() {
           </p>
         </div>
 
-        <div className="grid gap-3 pt-6 md:grid-cols-3">
+        <div className="grid gap-3 pt-6 md:grid-cols-2 xl:grid-cols-4">
           {PATHS.map((p) => (
             <article
               key={p.role}

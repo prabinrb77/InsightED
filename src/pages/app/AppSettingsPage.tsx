@@ -1,6 +1,7 @@
 import useSession from "../../hooks/useSession";
 import { supabase } from "../../lib/supabase";
 import Avatar from "../../components/Avatar";
+import { useNavigate } from "react-router-dom";
 
 /**
  * Educator settings. The Figma file has settings frames for the parent,
@@ -9,7 +10,13 @@ import Avatar from "../../components/Avatar";
  */
 export default function AppSettingsPage() {
   const session = useSession();
+  const navigate = useNavigate();
   const email = session?.user.email ?? "sarah.jenkins@school.edu.au";
+
+  async function leave(destination: "/login" | "/") {
+    if (supabase) await supabase.auth.signOut();
+    navigate(destination);
+  }
 
   return (
     <div className="px-4 py-8 md:px-8">
@@ -63,15 +70,24 @@ export default function AppSettingsPage() {
         <section className="rounded-xl border border-line bg-white p-6">
           <h2 className="text-sm font-bold text-ink">Account</h2>
           <p className="pt-2 text-xs leading-5 text-muted">
-            Signing out returns you to the marketing site.
+            Switch accounts to sign in as another approved user, or log out and return to the public site.
           </p>
-          <button
-            type="button"
-            onClick={() => supabase?.auth.signOut()}
-            className="mt-4 flex h-10 items-center rounded-lg border border-line bg-white px-4 text-sm font-semibold text-ink hover:bg-mist"
-          >
-            Log out
-          </button>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => void leave("/login")}
+              className="flex h-10 items-center rounded-lg border border-line bg-white px-4 text-sm font-semibold text-ink hover:bg-mist"
+            >
+              Switch account
+            </button>
+            <button
+              type="button"
+              onClick={() => void leave("/")}
+              className="flex h-10 items-center rounded-lg border border-red-200 bg-white px-4 text-sm font-semibold text-red-600 hover:bg-red-50"
+            >
+              Log out
+            </button>
+          </div>
         </section>
       </div>
     </div>

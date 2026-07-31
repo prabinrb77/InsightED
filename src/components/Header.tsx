@@ -58,6 +58,12 @@ export default function Header() {
               >
                 Log out
               </button>
+              <Link
+                to="/app"
+                className="flex h-12 items-center justify-center rounded-lg bg-brand px-6 text-base font-semibold text-white shadow-btn transition-colors hover:bg-[#255d99]"
+              >
+                Educator dashboard
+              </Link>
             </>
           ) : (
             <>
@@ -65,7 +71,7 @@ export default function Header() {
                 to="/login"
                 className="hidden text-base font-semibold leading-6 text-brand sm:inline-block"
               >
-                Login
+                Educator sign in
               </Link>
               <Link
                 to="/signup"
@@ -116,7 +122,7 @@ export default function Header() {
                 className="block text-base font-semibold text-brand"
                 onClick={() => setOpen(false)}
               >
-                Login
+                Educator sign in
               </Link>
             </li>
           </ul>

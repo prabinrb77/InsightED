@@ -1,17 +1,66 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import Avatar from "./Avatar";
 import Logo from "./Logo";
+import useSession from "../hooks/useSession";
+import { supabase } from "../lib/supabase";
+import { getStudents } from "../lib/educatorStore";
 
 /** Figma: educator app shell — dark rail + search/profile top bar (1:495 and siblings). */
 
 const NAV = [
   { to: "/app", label: "Dashboard", icon: DashboardIcon, end: true },
   { to: "/app/students", label: "Students", icon: StudentsIcon },
+  { to: "/app/activity", label: "Activity", icon: ActivityIcon },
   { to: "/app/messages", label: "Messages", icon: MessagesIcon },
   { to: "/app/schedule", label: "Schedule", icon: ScheduleIcon },
 ];
 
 export default function AppLayout() {
+  const navigate = useNavigate();
+  const session = useSession();
+  const [search, setSearch] = useState("");
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const email = session?.user.email ?? "sarah.jenkins@school.edu.au";
+  const students = getStudents();
+  const matches = search.trim()
+    ? students
+        .filter((student) =>
+          `${student.full} ${student.studentId}`
+            .toLowerCase()
+            .includes(search.trim().toLowerCase()),
+        )
+        .slice(0, 5)
+    : [];
+
+  useEffect(() => {
+    function closeMenus(event: MouseEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setShowAccount(false);
+        setShowNotifications(false);
+      }
+    }
+    document.addEventListener("mousedown", closeMenus);
+    return () => document.removeEventListener("mousedown", closeMenus);
+  }, []);
+
+  function submitSearch(event: FormEvent) {
+    event.preventDefault();
+    if (matches[0]) {
+      navigate(`/app/students/${matches[0].id}`);
+      setSearch("");
+    } else if (search.trim()) {
+      navigate(`/app/students?search=${encodeURIComponent(search.trim())}`);
+    }
+  }
+
+  async function signOut(destination: "/login" | "/") {
+    if (supabase) await supabase.auth.signOut();
+    navigate(destination);
+  }
+
   return (
     <div className="flex min-h-screen bg-page">
       <a
@@ -63,18 +112,48 @@ export default function AppLayout() {
       {/* ── Main column ──────────────────────────────────────── */}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-40 flex h-[72px] shrink-0 items-center gap-4 border-b border-line bg-white px-4 md:px-6">
-          <label className="relative w-full max-w-[350px]">
+          <form onSubmit={submitSearch} className="relative w-full max-w-[350px]">
             <span className="sr-only">Search</span>
             <SearchIcon />
             <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
               placeholder="Search students, logs, or activities..."
               className="h-10 w-full rounded-lg border border-line bg-mist pl-10 pr-4 text-sm text-ink placeholder:text-footext focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/20"
             />
-          </label>
+            {search.trim() && (
+              <div className="absolute left-0 right-0 top-12 overflow-hidden rounded-xl border border-line bg-white shadow-xl">
+                {matches.length ? (
+                  matches.map((student) => (
+                    <Link
+                      key={student.id}
+                      to={`/app/students/${student.id}`}
+                      onClick={() => setSearch("")}
+                      className="flex items-center gap-3 border-b border-line px-4 py-3 last:border-0 hover:bg-mist"
+                    >
+                      <Avatar name={student.full} className="size-8 text-xs" />
+                      <span>
+                        <span className="block text-sm font-semibold text-ink">{student.full}</span>
+                        <span className="block text-xs text-muted">{student.studentId} · {student.grade}</span>
+                      </span>
+                    </Link>
+                  ))
+                ) : (
+                  <div className="px-4 py-4 text-sm text-muted">
+                    No matching students. Press Enter to search the directory.
+                  </div>
+                )}
+              </div>
+            )}
+          </form>
 
-          <div className="ml-auto flex items-center gap-4">
+          <div ref={menuRef} className="relative ml-auto flex items-center gap-4">
             <button
               type="button"
+              onClick={() => {
+                setShowNotifications((value) => !value);
+                setShowAccount(false);
+              }}
               aria-label="Notifications"
               className="relative text-slate hover:text-ink"
             >
@@ -87,7 +166,16 @@ export default function AppLayout() {
 
             <span aria-hidden className="h-8 w-px bg-line" />
 
-            <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setShowAccount((value) => !value);
+                setShowNotifications(false);
+              }}
+              className="flex items-center gap-3 rounded-lg p-1.5 text-left hover:bg-mist"
+              aria-expanded={showAccount}
+              aria-label="Open educator account menu"
+            >
               <span className="hidden text-right sm:block">
                 <span className="block text-sm font-bold leading-5 text-ink">
                   Sarah Jenkins
@@ -97,7 +185,44 @@ export default function AppLayout() {
                 </span>
               </span>
               <Avatar name="Sarah Jenkins" className="size-9" />
-            </div>
+              <span aria-hidden className="text-xs text-muted">⌄</span>
+            </button>
+
+            {showNotifications && (
+              <div className="absolute right-12 top-12 w-[320px] overflow-hidden rounded-xl border border-line bg-white shadow-xl">
+                <div className="flex items-center justify-between border-b border-line px-4 py-3">
+                  <h2 className="text-sm font-bold text-ink">Notifications</h2>
+                  <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-bold text-white">2 new</span>
+                </div>
+                <Link to="/app/messages" onClick={() => setShowNotifications(false)} className="block border-b border-line px-4 py-3 hover:bg-mist">
+                  <p className="text-sm font-semibold text-ink">New guardian reply</p>
+                  <p className="mt-0.5 text-xs text-muted">Elena replied about Mateo’s support plan.</p>
+                </Link>
+                <Link to="/app/schedule" onClick={() => setShowNotifications(false)} className="block px-4 py-3 hover:bg-mist">
+                  <p className="text-sm font-semibold text-ink">IEP review today</p>
+                  <p className="mt-0.5 text-xs text-muted">Maya R. · 11:30 AM</p>
+                </Link>
+              </div>
+            )}
+
+            {showAccount && (
+              <div className="absolute right-0 top-12 w-[260px] overflow-hidden rounded-xl border border-line bg-white shadow-xl">
+                <div className="border-b border-line px-4 py-4">
+                  <p className="font-bold text-ink">Sarah Jenkins</p>
+                  <p className="truncate text-xs text-muted">{email}</p>
+                  <span className="mt-2 inline-flex rounded-full bg-teal-tint px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-teal">Educator</span>
+                </div>
+                <Link to="/app/settings" onClick={() => setShowAccount(false)} className="block px-4 py-3 text-sm font-semibold text-ink hover:bg-mist">
+                  Profile & settings
+                </Link>
+                <button type="button" onClick={() => void signOut("/login")} className="block w-full px-4 py-3 text-left text-sm font-semibold text-ink hover:bg-mist">
+                  Switch account
+                </button>
+                <button type="button" onClick={() => void signOut("/")} className="block w-full border-t border-line px-4 py-3 text-left text-sm font-semibold text-red-600 hover:bg-red-50">
+                  Log out
+                </button>
+              </div>
+            )}
           </div>
         </header>
 
@@ -151,6 +276,14 @@ function StudentsIcon() {
       <circle cx="14" cy="8" r="2.2" />
       <path d="M1.5 16c0-2.8 2.5-4.5 5.5-4.5s5.5 1.7 5.5 4.5H1.5Z" />
       <path d="M14 11.5c2.3 0 4.5 1.2 4.5 3.4V16H14v-4.5Z" />
+    </svg>
+  );
+}
+
+function ActivityIcon() {
+  return (
+    <svg aria-hidden viewBox="0 0 20 20" fill="none" className="size-5">
+      <path d="M3 15V9m5 6V5m5 10v-3m4 3V7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }
