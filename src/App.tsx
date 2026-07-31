@@ -22,6 +22,11 @@ import StudentProfilePage from "./pages/app/StudentProfilePage";
 import MessagesPage from "./pages/app/MessagesPage";
 import SchedulePage from "./pages/app/SchedulePage";
 import AppSettingsPage from "./pages/app/AppSettingsPage";
+import SuperAdminLayout from "./components/SuperAdminLayout";
+import RequireRole from "./components/RequireRole";
+import SuperDashboardPage from "./pages/admin/SuperDashboardPage";
+import TenantsPage from "./pages/admin/TenantsPage";
+import AdminAccessPage from "./pages/admin/AdminAccessPage";
 import Placeholder from "./pages/Placeholder";
 
 export default function App() {
@@ -45,6 +50,40 @@ export default function App() {
         <Route path="messages" element={<MessagesPage />} />
         <Route path="schedule" element={<SchedulePage />} />
         <Route path="settings" element={<AppSettingsPage />} />
+      </Route>
+
+      {/* Super admin console — restricted to profiles.role = 'super_admin'.
+          RLS is the real boundary; this guard just keeps others out of screens
+          that would show them nothing. */}
+      <Route
+        path="/admin"
+        element={
+          <RequireRole allow={["super_admin"]}>
+            <SuperAdminLayout />
+          </RequireRole>
+        }
+      >
+        <Route index element={<SuperDashboardPage />} />
+        <Route path="tenants" element={<TenantsPage />} />
+        <Route path="settings" element={<AdminAccessPage />} />
+        <Route
+          path="mlops"
+          element={<Placeholder title="MLOps & AI Governance" figmaNode="1:8124" />}
+        />
+        <Route
+          path="security"
+          element={<Placeholder title="Security & Compliance" figmaNode="1:8478" />}
+        />
+        <Route
+          path="infrastructure"
+          element={
+            <Placeholder title="Infrastructure & DevOps" figmaNode="1:9168" />
+          }
+        />
+        <Route
+          path="billing"
+          element={<Placeholder title="Billing & Revenue" figmaNode="1:8729" />}
+        />
       </Route>
 
       {/* Marketing site */}

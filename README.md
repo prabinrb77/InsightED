@@ -148,6 +148,72 @@ the generic form rather than an invented multi-step flow. Design the parent
 screens (or confirm "Link Your Children" is the intended step 2) and it can be
 built the same way as the other two.
 
+## Super admin console
+
+`/admin` is a separate shell (`SuperAdminLayout`) with its own navy rail, gated
+by `RequireRole` to `profiles.role = 'super_admin'`.
+
+| Route | Figma | Status |
+| --- | --- | --- |
+| `/admin` | SU1 `1:7565` Global Command Center | built |
+| `/admin/tenants` | SU2 `1:7857` Tenant Management | built |
+| `/admin/settings` | `1:9540` Settings & RBAC | built |
+| `/admin/mlops`, `/security`, `/infrastructure`, `/billing` | `1:8124`, `1:8478`, `1:9168`, `1:8729` | placeholder |
+
+**The guard is not the security boundary — RLS is.** `RequireRole` only keeps
+honest users out of screens that would show them empty tables; anyone who edits
+their local state still gets nothing back, because
+[`0002_super_admin.sql`](supabase/migrations/0002_super_admin.sql) is what
+actually grants a super_admin read access.
+
+### Creating the first super admin
+
+Roles can't be self-assigned: `handle_new_user()` refuses `school_admin` and
+`super_admin` claims from signup metadata. So the first one is made by hand.
+Run the migrations, then:
+
+```bash
+SUPABASE_URL=https://xxxx.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=eyJ... \
+node scripts/create-super-admin.mjs
+```
+
+It creates the account through the Admin API with `email_confirm: true` and
+promotes the profile to `super_admin`. Re-running it repairs an existing account
+rather than duplicating it, so it doubles as a password reset. The service_role
+key bypasses every RLS policy — keep it out of the repo, out of the browser, and
+never give it a `VITE_` prefix.
+
+Defaults to `prabinrb77@gmail.com`; override with `SUPER_ADMIN_EMAIL`,
+`SUPER_ADMIN_PASSWORD`, `SUPER_ADMIN_NAME`.
+
+`node scripts/check-auth-setup.mjs` reports which providers are live and probes
+sign-in, so a failing login can be traced to a setting instead of guessed at.
+[`supabase/seed_super_admin.sql`](supabase/seed_super_admin.sql) is the manual
+SQL equivalent.
+
+Sign-in accepts a phone number or an email in the same field;
+`src/lib/authIdentifier.ts` normalises `0400071139` and `+61 400 071 139` alike
+to `+61400071139`. Email is the supported path — phone sign-in additionally
+needs the Phone provider plus Twilio credentials, which the project doesn't
+have. Pass `SUPER_ADMIN_PHONE` to the script if that changes.
+
+### Creating schools
+
+`/admin/tenants` → **Provision New District** inserts a real `schools` row,
+gated by the `schools_admin_insert` policy. The commercial columns in that table
+— tier, seats, renewal, health — don't exist in the schema yet, so seeded rows
+stand in for them and real schools appear beneath with those fields blank.
+
+### Granting school admin
+
+The console promotes an account that already exists rather than creating one —
+creating a user needs the service_role key, which must never reach the browser.
+The invitee signs up normally, then `/admin/settings` → **Grant School Admin**
+calls the `grant_school_admin` RPC, which checks the caller is a super_admin,
+flips the role, optionally attaches them to a school, and writes an
+`audit_log` row. `revoke_school_admin` reverses it.
+
 ## Conventions
 
 - **Design tokens live in `tailwind.config.js`.** Colours read out of the Figma file are named there (`ink`, `brand`, `teal`, `body`, `muted`, `line`…). Use the token, not a raw hex.

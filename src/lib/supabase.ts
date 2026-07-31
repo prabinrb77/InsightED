@@ -1,7 +1,13 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+
+/**
+ * Accept both Supabase's newer publishable key and the legacy anon key.
+ */
+const anonKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+  import.meta.env.VITE_SUPABASE_ANON_KEY) as string | undefined;
+
 export const AUTHORIZED_EDUCATOR_EMAIL = (
   (import.meta.env.VITE_AUTHORIZED_EDUCATOR_EMAIL as string | undefined) ??
   "sarah.jenkins@school.edu.au"
