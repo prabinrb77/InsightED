@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import useProfile, { UserRole, heldRoles } from "../hooks/useProfile";
 import { supabase } from "../lib/supabase";
+import { getDemoSession } from "../lib/demoAccounts";
 
 /**
  * Route guard for role-restricted areas.
@@ -24,7 +25,16 @@ export default function RequireRole({
 }) {
   const { profile, loading, session } = useProfile();
 
-  if (!supabase) return <>{children}</>;
+  // No backend: enforce against the presentation account if one is signed in,
+  // so role separation is demonstrable. With nobody signed in, stay open —
+  // the screens still need to be reviewable by URL.
+  if (!supabase) {
+    const demo = getDemoSession();
+    if (demo && !allow.includes(demo.role)) {
+      return <Navigate to={demo.home} replace />;
+    }
+    return <>{children}</>;
+  }
   if (loading) return <GuardSplash />;
   if (!session) return <Navigate to="/login" replace />;
   // Checked against every role held, not just the primary one, so a teacher

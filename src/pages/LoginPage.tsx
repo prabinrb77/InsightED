@@ -2,12 +2,14 @@ import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AuthLayout from "../components/AuthLayout";
 import { GoogleLogo, MicrosoftLogo } from "../components/SocialAuthButtons";
-import {
-  supabase,
-  DEMO_EDUCATOR_PASSWORD,
-  isAuthorizedEducatorEmail,
-} from "../lib/supabase";
+import { supabase } from "../lib/supabase";
 import { credentialsFor } from "../lib/authIdentifier";
+import {
+  DEMO_ACCOUNTS,
+  DEMO_PASSWORD,
+  findDemoAccount,
+  setDemoSession,
+} from "../lib/demoAccounts";
 
 /** Figma: node 1:198 "Login Page" */
 
@@ -23,22 +25,21 @@ export default function LoginPage() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!isAuthorizedEducatorEmail(email)) {
-      setNotice({
-        kind: "error",
-        text: "This educator portal is private. Only the approved educator email can sign in.",
-      });
-      return;
-    }
+
+    // No backend configured: fall back to the presentation accounts so the app
+    // is still demonstrable, one per role. With Supabase live this branch never
+    // runs and sign-in is open to every real account.
     if (!supabase) {
-      if (password !== DEMO_EDUCATOR_PASSWORD) {
+      const account = findDemoAccount(email);
+      if (!account || password !== DEMO_PASSWORD) {
         setNotice({
           kind: "error",
-          text: "Incorrect password for the presentation educator account.",
+          text: "Accounts aren't connected yet. Use one of the presentation logins listed below.",
         });
         return;
       }
-      navigate("/app");
+      setDemoSession(account);
+      navigate(account.home);
       return;
     }
     setBusy(true);
@@ -52,8 +53,9 @@ export default function LoginPage() {
       return;
     }
 
-    // Land people where their role actually works. The profile row is the only
-    // place the role lives, so this needs a round trip before navigating.
+    // Everyone lands on the homepage — a parent or specialist has no business
+    // in the educator dashboard. The one exception is the super admin console,
+    // which is the only area with no other entry point.
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
@@ -61,7 +63,7 @@ export default function LoginPage() {
       .maybeSingle();
 
     setBusy(false);
-    navigate(profile?.role === "super_admin" ? "/admin" : "/app");
+    navigate(profile?.role === "super_admin" ? "/admin" : "/");
   }
 
   async function handleProvider(provider: "google" | "microsoft") {
@@ -79,7 +81,7 @@ export default function LoginPage() {
             Welcome Back
           </h1>
           <p className="text-base leading-6 text-slate">
-            Sign in to access your educational ecosystem
+            Sign in to your MiZanova account
           </p>
         </div>
 
@@ -101,7 +103,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@school.edu.au or 0400 071 139"
+                placeholder="you@school.edu.au or phone number"
                 className="h-12 w-full rounded-lg border border-line bg-white pl-11 pr-4 text-base text-authink placeholder:text-footext focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20"
               />
             </div>
@@ -209,8 +211,44 @@ export default function LoginPage() {
             Create an account
           </Link>
         </p>
+
+        {/* Only rendered with no backend attached, so it can't leak into a
+            deployment that has real accounts behind it. */}
+        {!supabase && <DemoAccountHint onPick={setEmail} />}
       </div>
     </AuthLayout>
+  );
+}
+
+function DemoAccountHint({ onPick }: { onPick: (email: string) => void }) {
+  return (
+    <div className="mt-6 rounded-lg border border-line bg-mist p-4">
+      <p className="text-xs font-bold uppercase tracking-[0.5px] text-muted">
+        Presentation logins
+      </p>
+      <p className="mt-1 text-xs leading-4 text-muted">
+        No database is attached. Password for all:{" "}
+        <code className="rounded bg-white px-1 py-0.5 font-semibold text-subtle">
+          {DEMO_PASSWORD}
+        </code>
+      </p>
+      <ul className="mt-3 flex flex-col gap-1.5">
+        {DEMO_ACCOUNTS.map((a) => (
+          <li key={a.email}>
+            <button
+              type="button"
+              onClick={() => onPick(a.email)}
+              className="flex w-full items-baseline justify-between gap-3 rounded px-1 py-0.5 text-left hover:bg-white"
+            >
+              <span className="truncate text-xs text-subtle">{a.email}</span>
+              <span className="shrink-0 text-[11px] font-semibold text-brand">
+                {a.role.replace("_", " ")}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

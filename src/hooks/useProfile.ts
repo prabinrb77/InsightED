@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { getDemoSession } from "../lib/demoAccounts";
 import useSession from "./useSession";
 
 export type UserRole =
@@ -55,9 +56,29 @@ export default function useProfile() {
   useEffect(() => {
     let cancelled = false;
 
-    // No backend configured, or signed out: settle immediately so guards can
-    // decide instead of spinning forever.
-    if (!supabase || !session?.user) {
+    // No backend: surface the presentation account so the shells show the right
+    // name and role instead of a hardcoded placeholder.
+    if (!supabase) {
+      const demo = getDemoSession();
+      setProfile(
+        demo
+          ? {
+              id: "demo",
+              role: demo.role,
+              roles: [demo.role],
+              active_role: demo.role,
+              full_name: demo.name,
+              email: demo.email,
+              phone: null,
+            }
+          : null,
+      );
+      setLoading(false);
+      return;
+    }
+
+    // Signed out: settle immediately so guards can decide rather than spin.
+    if (!session?.user) {
       setProfile(null);
       setLoading(false);
       return;

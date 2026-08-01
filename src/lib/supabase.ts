@@ -8,19 +8,8 @@ const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const anonKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
   import.meta.env.VITE_SUPABASE_ANON_KEY) as string | undefined;
 
-export const AUTHORIZED_EDUCATOR_EMAIL = (
-  (import.meta.env.VITE_AUTHORIZED_EDUCATOR_EMAIL as string | undefined) ??
-  "sarah.jenkins@school.edu.au"
-)
-  .trim()
-  .toLowerCase();
-
-/** Presentation-only credential used when no Supabase project is configured. */
-export const DEMO_EDUCATOR_PASSWORD = "Educator123!";
-
-export function isAuthorizedEducatorEmail(email: string) {
-  return email.trim().toLowerCase() === AUTHORIZED_EDUCATOR_EMAIL;
-}
+/* The single hardcoded educator login this file used to carry has been replaced
+   by the per-role presentation accounts in ./demoAccounts.ts. */
 
 /**
  * Null until VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are set (in .env.local
