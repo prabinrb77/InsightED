@@ -79,6 +79,17 @@ export const STUDENTS: Student[] = [
     attendance: 94,
     trend: "improving",
   },
+  {
+    id: "tahmid-w",
+    short: "Tahmid W.",
+    full: "Tahmid White",
+    code: "4026",
+    studentId: "#STU-8826",
+    grade: "Grade 4",
+    guardian: "Robert White (Father)",
+    attendance: 98,
+    trend: "improving",
+  },
 ];
 
 export function findStudent(id: string) {
