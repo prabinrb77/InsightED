@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import Logo from "./Logo";
-import useSession from "../hooks/useSession";
+import useProfile, { activeRoleOf } from "../hooks/useProfile";
 import { supabase } from "../lib/supabase";
+import { clearDemoSession, homeForRole } from "../lib/demoAccounts";
 
 /** Figma: node 264:1826 "Header" */
 
@@ -17,7 +18,14 @@ const NAV = [
 
 export default function Header() {
   const [open, setOpen] = useState(false);
-  const session = useSession();
+  const { profile, session } = useProfile();
+  const signedIn = Boolean(session || profile);
+  const workspaceHome = homeForRole(activeRoleOf(profile));
+
+  function handleSignOut() {
+    if (supabase) void supabase.auth.signOut();
+    else clearDemoSession();
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-white">
@@ -43,26 +51,26 @@ export default function Header() {
         </nav>
 
         <div className="ml-auto flex items-center gap-4 lg:ml-0">
-          {session ? (
+          {signedIn ? (
             <>
               <span
                 className="hidden max-w-[200px] truncate text-sm leading-6 text-muted sm:inline-block"
-                title={session.user.email}
+                title={session?.user.email ?? profile?.email ?? undefined}
               >
-                {session.user.email}
+                {session?.user.email ?? profile?.email}
               </span>
               <button
                 type="button"
-                onClick={() => supabase?.auth.signOut()}
+                onClick={handleSignOut}
                 className="flex h-12 items-center justify-center rounded-lg border border-line px-6 text-base font-semibold text-ink transition-colors hover:bg-line-soft"
               >
                 Log out
               </button>
               <Link
-                to="/app"
+                to={workspaceHome}
                 className="flex h-12 items-center justify-center rounded-lg bg-brand px-6 text-base font-semibold text-white shadow-btn transition-colors hover:bg-[#255d99]"
               >
-                Educator dashboard
+                Open workspace
               </Link>
             </>
           ) : (
@@ -71,7 +79,7 @@ export default function Header() {
                 to="/login"
                 className="hidden text-base font-semibold leading-6 text-brand sm:inline-block"
               >
-                Educator sign in
+                Sign in
               </Link>
               <Link
                 to="/signup"
@@ -122,7 +130,7 @@ export default function Header() {
                 className="block text-base font-semibold text-brand"
                 onClick={() => setOpen(false)}
               >
-                Educator sign in
+                Sign in
               </Link>
             </li>
           </ul>

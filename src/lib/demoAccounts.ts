@@ -20,38 +20,68 @@ export type DemoAccount = {
   name: string;
   /** Where this role lands after sign-in. */
   home: string;
+  school?: { id: string; name: string };
 };
+
+export function homeForRole(role: UserRole | null | undefined) {
+  if (role === "super_admin" || role === "platform_admin") return "/admin";
+  if (
+    role === "teacher" ||
+    role === "external_teacher" ||
+    role === "school_admin"
+  ) {
+    return "/app";
+  }
+  return "/";
+}
 
 export const DEMO_ACCOUNTS: DemoAccount[] = [
   {
     email: "superadmin@mizanova.com.au",
     role: "super_admin",
     name: "Super Admin",
-    home: "/admin",
+    home: homeForRole("super_admin"),
   },
   {
-    email: "schooladmin@mizanova.com.au",
+    email: "admin@harbourview.demo",
     role: "school_admin",
-    name: "School Admin",
-    home: "/app",
+    name: "Harbourview Admin",
+    home: homeForRole("school_admin"),
+    school: { id: "harbourview", name: "Harbourview Primary" },
   },
   {
-    email: "teacher@mizanova.com.au",
+    email: "teacher@harbourview.demo",
     role: "teacher",
     name: "Sarah Jenkins",
-    home: "/app",
+    home: homeForRole("teacher"),
+    school: { id: "harbourview", name: "Harbourview Primary" },
+  },
+  {
+    email: "teacher@banksia.demo",
+    role: "teacher",
+    name: "Noah Williams",
+    home: homeForRole("teacher"),
+    school: { id: "banksia", name: "Banksia Grove School" },
+  },
+  {
+    email: "teacher@rivergum.demo",
+    role: "teacher",
+    name: "Amelia Chen",
+    home: homeForRole("teacher"),
+    school: { id: "rivergum", name: "Rivergum College" },
   },
   {
     email: "specialist@mizanova.com.au",
     role: "specialist",
     name: "Dr. Aris",
-    home: "/",
+    home: homeForRole("specialist"),
+    school: { id: "harbourview", name: "Harbourview Primary" },
   },
   {
     email: "parent@mizanova.com.au",
     role: "parent",
     name: "Parent",
-    home: "/",
+    home: homeForRole("parent"),
   },
 ];
 

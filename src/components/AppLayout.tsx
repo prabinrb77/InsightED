@@ -5,6 +5,8 @@ import Logo from "./Logo";
 import useSession from "../hooks/useSession";
 import { supabase } from "../lib/supabase";
 import { getStudents } from "../lib/educatorStore";
+import useCurrentSchool from "../hooks/useCurrentSchool";
+import { getDemoSession } from "../lib/demoAccounts";
 
 /** Figma: educator app shell — dark rail + search/profile top bar (1:495 and siblings). */
 
@@ -19,6 +21,9 @@ const NAV = [
 export default function AppLayout() {
   const navigate = useNavigate();
   const session = useSession();
+  const { school } = useCurrentSchool();
+  const demoAccount = getDemoSession();
+  const displayName = demoAccount?.name ?? "Sarah Jenkins";
   const [search, setSearch] = useState("");
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
@@ -178,13 +183,13 @@ export default function AppLayout() {
             >
               <span className="hidden text-right sm:block">
                 <span className="block text-sm font-bold leading-5 text-ink">
-                  Sarah Jenkins
+                  {displayName}
                 </span>
                 <span className="block text-xs leading-4 text-muted">
-                  Educator
+                  {school?.name ?? "No school assigned"}
                 </span>
               </span>
-              <Avatar name="Sarah Jenkins" className="size-9" />
+              <Avatar name={displayName} className="size-9" />
               <span aria-hidden className="text-xs text-muted">⌄</span>
             </button>
 
@@ -208,9 +213,9 @@ export default function AppLayout() {
             {showAccount && (
               <div className="absolute right-0 top-12 w-[260px] overflow-hidden rounded-xl border border-line bg-white shadow-xl">
                 <div className="border-b border-line px-4 py-4">
-                  <p className="font-bold text-ink">Sarah Jenkins</p>
+                  <p className="font-bold text-ink">{displayName}</p>
                   <p className="truncate text-xs text-muted">{email}</p>
-                  <span className="mt-2 inline-flex rounded-full bg-teal-tint px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-teal">Educator</span>
+                  <span className="mt-2 inline-flex rounded-full bg-teal-tint px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-teal">{school?.name ?? "No school assigned"}</span>
                 </div>
                 <Link to="/app/settings" onClick={() => setShowAccount(false)} className="block px-4 py-3 text-sm font-semibold text-ink hover:bg-mist">
                   Profile & settings

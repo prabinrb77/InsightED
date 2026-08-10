@@ -1,6 +1,9 @@
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { addStudent } from "../../lib/educatorStore";
+import { supabase } from "../../lib/supabase";
+import useSession from "../../hooks/useSession";
+import useCurrentSchool from "../../hooks/useCurrentSchool";
 
 /** Figma: node 301:2163 "Add a new student" */
 
@@ -42,17 +45,32 @@ function Req() {
 
 export default function AddStudentPage() {
   const navigate = useNavigate();
+  const session = useSession();
+  const { school, isDemo } = useCurrentSchool();
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const data = new FormData(e.currentTarget as HTMLFormElement);
-    const student = addStudent({
+    const input = {
       first: String(data.get("first")),
       last: String(data.get("last")),
       grade: String(data.get("group") || "Grade 4"),
       guardian: String(data.get("contact") || "Not provided"),
-    });
+    };
+    if (!isDemo && supabase && session && school) {
+      const { data: student, error: insertError } = await supabase.from("students").insert({
+        school_id: school.id, first_name: input.first, last_name: input.last,
+        date_of_birth: String(data.get("dob")), class_group: input.grade,
+        student_code: String(Date.now()).slice(-6),
+      }).select("id").single();
+      if (insertError) { setError(insertError.message); return; }
+      setSaved(true);
+      window.setTimeout(() => navigate(`/app/students/${student.id}`), 500);
+      return;
+    }
+    const student = addStudent(input);
     setSaved(true);
     window.setTimeout(() => navigate(`/app/students/${student.id}`), 500);
   }
@@ -315,6 +333,7 @@ export default function AddStudentPage() {
               Student saved. Opening the new profile…
             </p>
           )}
+          {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">Student could not be saved: {error}</p>}
         </div>
       </div>
 

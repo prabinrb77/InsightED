@@ -10,6 +10,8 @@ export type MessageItem = {
   pending?: boolean;
   attachmentUrl?: string;
   attachmentName?: string;
+  attachmentMime?: string;
+  attachmentSize?: number;
 };
 
 export type MessageThread = {
@@ -181,7 +183,7 @@ export default function useMessages(session: Session | null): StoreState {
           .in("conversation_id", ids),
         supabase
           .from("messages")
-          .select("id,conversation_id,sender_id,body,created_at")
+          .select("id,conversation_id,sender_id,body,created_at,attachment_path,attachment_name,attachment_mime,attachment_size")
           .in("conversation_id", ids)
           .is("deleted_at", null)
           .order("created_at", { ascending: true }),
@@ -202,7 +204,11 @@ export default function useMessages(session: Session | null): StoreState {
       ]),
     );
     const participants = participantResult.data ?? [];
-    const messages = messageResult.data ?? [];
+    const messages = await Promise.all((messageResult.data ?? []).map(async (message) => {
+      if (!message.attachment_path) return { ...message, signed_url: undefined as string | undefined };
+      const { data } = await supabase!.storage.from("message-attachments").createSignedUrl(message.attachment_path as string, 600);
+      return { ...message, signed_url: data?.signedUrl };
+    }));
 
     const next = (conversationResult.data ?? []).map((conversation) => {
       const other = participants.find(
@@ -231,12 +237,16 @@ export default function useMessages(session: Session | null): StoreState {
         messages: messages
           .filter((message) => message.conversation_id === conversation.id)
           .map((message) => {
-            const content = unpackBody(message.body as string);
+            const content = unpackBody((message.body as string | null) ?? "");
             return {
               id: message.id as string,
               ...content,
               senderId: message.sender_id as string,
               createdAt: message.created_at as string,
+              attachmentUrl: (message.signed_url as string | undefined) ?? content.attachmentUrl,
+              attachmentName: (message.attachment_name as string | undefined) ?? content.attachmentName,
+              attachmentMime: message.attachment_mime as string | undefined,
+              attachmentSize: message.attachment_size as number | undefined,
             };
           }),
       };
@@ -283,6 +293,7 @@ export default function useMessages(session: Session | null): StoreState {
       if (!body && !attachment) return false;
       let attachmentUrl: string | undefined;
       let attachmentName: string | undefined;
+      let attachmentPath: string | undefined;
 
       if (attachment) {
         attachmentName = attachment.name;
@@ -291,6 +302,7 @@ export default function useMessages(session: Session | null): StoreState {
         } else {
           const safeName = attachment.name.replace(/[^a-zA-Z0-9._-]/g, "-");
           const path = `${conversationId}/${crypto.randomUUID()}-${safeName}`;
+          attachmentPath = path;
           const { error: uploadError } = await supabase!.storage
             .from("message-attachments")
             .upload(path, attachment, { contentType: attachment.type });
@@ -337,7 +349,11 @@ export default function useMessages(session: Session | null): StoreState {
       const { error: sendError } = await supabase!.from("messages").insert({
         conversation_id: conversationId,
         sender_id: userId,
-        body: `${body}${attachmentUrl ? `\n[[image:${attachmentUrl}|${attachmentName}]]` : ""}`,
+        body: body || null,
+        attachment_path: attachmentPath,
+        attachment_name: attachmentName,
+        attachment_mime: attachment?.type || null,
+        attachment_size: attachment?.size || null,
       });
       if (sendError) {
         setThreads((current) =>

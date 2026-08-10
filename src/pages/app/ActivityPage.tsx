@@ -1,120 +1,35 @@
-import { useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getBehaviourLogs, getStudents } from "../../lib/educatorStore";
+import { supabase } from "../../lib/supabase";
+import useCurrentSchool from "../../hooks/useCurrentSchool";
+import useSession from "../../hooks/useSession";
 
-type Filter = "All" | "Low" | "Medium" | "High";
+type Activity = { id:string; title:string; date:string; period:string; student?:string; done:boolean };
+const today = () => new Date().toISOString().slice(0,10);
+const seeds: Activity[] = [
+  {id:"arrival",title:"Arrival wellbeing check",date:today(),period:"8:30 AM",done:true},
+  {id:"movement",title:"Whole-class movement break",date:today(),period:"10:30 AM",done:false},
+  {id:"visual",title:"Prepare visual transition cards",date:today(),period:"Before lunch",student:"Maya Reid",done:false},
+  {id:"reflection",title:"End-of-day student reflection",date:today(),period:"3:00 PM",done:false},
+];
 
 export default function ActivityPage() {
-  const [filter, setFilter] = useState<Filter>("All");
-  const logs = getBehaviourLogs();
-  const students = getStudents();
-  const visible = useMemo(
-    () => logs.filter((log) => filter === "All" || log.intensity === filter),
-    [filter, logs],
-  );
-
-  function studentFor(id: string) {
-    return students.find((student) => student.id === id);
-  }
-
-  return (
-    <div className="px-4 py-8 md:px-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-[-0.5px] text-ink">
-            Behaviour activity
-          </h1>
-          <p className="pt-1 text-[15px] leading-6 text-muted">
-            Review classroom observations and support context.
-          </p>
-        </div>
-        <Link
-          to="/app/students"
-          className="flex h-11 items-center rounded-lg bg-brand px-5 text-sm font-semibold text-white hover:bg-[#255d99]"
-        >
-          Log new behaviour
-        </Link>
-      </div>
-
-      <div className="mt-6 flex flex-wrap gap-2" role="tablist" aria-label="Filter activity by intensity">
-        {(["All", "Low", "Medium", "High"] as const).map((value) => (
-          <button
-            key={value}
-            role="tab"
-            aria-selected={filter === value}
-            onClick={() => setFilter(value)}
-            className={[
-              "rounded-lg px-4 py-2 text-sm font-semibold",
-              filter === value
-                ? "bg-brand text-white"
-                : "border border-line bg-white text-muted hover:bg-mist",
-            ].join(" ")}
-          >
-            {value}
-          </button>
-        ))}
-      </div>
-
-      <section className="mt-5 overflow-hidden rounded-xl border border-line bg-white">
-        {visible.length ? (
-          <ol>
-            {visible.map((log) => {
-              const student = studentFor(log.studentId);
-              return (
-                <li key={log.id} className="flex flex-wrap gap-4 border-b border-line px-5 py-5 last:border-0 md:flex-nowrap">
-                  <span
-                    className={[
-                      "mt-1 flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-bold",
-                      log.intensity === "High"
-                        ? "bg-red-100 text-red-700"
-                        : log.intensity === "Medium"
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-teal-tint text-teal",
-                    ].join(" ")}
-                  >
-                    {log.intensity.charAt(0)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {student ? (
-                        <Link to={`/app/students/${student.id}`} className="font-bold text-ink hover:text-brand">
-                          {student.full}
-                        </Link>
-                      ) : (
-                        <span className="font-bold text-ink">Student</span>
-                      )}
-                      <span className="rounded-full bg-mist px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-muted">
-                        {log.intensity} intensity
-                      </span>
-                    </div>
-                    <p className="mt-1 text-sm font-semibold text-slate">{log.behaviour}</p>
-                    <p className="mt-1 text-sm text-muted">{log.context}</p>
-                    {log.notes && <p className="mt-2 text-sm leading-6 text-body">{log.notes}</p>}
-                  </div>
-                  <time className="shrink-0 text-xs text-muted">
-                    {new Date(log.createdAt).toLocaleString([], {
-                      day: "numeric",
-                      month: "short",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}
-                  </time>
-                </li>
-              );
-            })}
-          </ol>
-        ) : (
-          <div className="px-6 py-16 text-center">
-            <p className="font-bold text-ink">No activity in this view</p>
-            <p className="mt-1 text-sm text-muted">
-              Behaviour logs recorded from the dashboard or student directory will appear here.
-            </p>
-            <Link to="/app/students" className="mt-5 inline-flex h-10 items-center rounded-lg bg-brand px-4 text-sm font-semibold text-white">
-              Choose a student
-            </Link>
-          </div>
-        )}
-      </section>
-    </div>
-  );
+  const session=useSession(); const {school,isDemo}=useCurrentSchool();
+  const [items,setItems]=useState<Activity[]>([]); const [error,setError]=useState<string|null>(null);
+  const logs=getBehaviourLogs(); const students=getStudents();
+  useEffect(()=>{ if(!school)return; if(isDemo||!supabase){try{setItems(JSON.parse(localStorage.getItem(`mizanova.activities.${school.id}`)||"null")||seeds)}catch{setItems(seeds)};return;}
+    supabase.from("planned_activities").select("id,title,activity_date,period,completed_at,students(first_name,last_name)").eq("school_id",school.id).order("activity_date").then(({data,error:e})=>{if(e)setError(e.message);else setItems((data??[]).map(r=>{const s=r.students as unknown as {first_name:string;last_name:string}|null;return{id:r.id,title:r.title,date:r.activity_date,period:r.period,student:s?`${s.first_name} ${s.last_name}`:undefined,done:Boolean(r.completed_at)}}))});
+  },[school?.id,isDemo]);
+  async function persist(next:Activity[], changed?:Activity, remove?:string){setItems(next);if(!school)return;if(isDemo||!supabase||!session){localStorage.setItem(`mizanova.activities.${school.id}`,JSON.stringify(next));return}if(remove){const{error:e}=await supabase.from("planned_activities").delete().eq("id",remove);if(e)setError(e.message);return}if(changed){const{error:e}=await supabase.from("planned_activities").upsert({id:changed.id,school_id:school.id,created_by:session.user.id,title:changed.title,activity_date:changed.date,period:changed.period,completed_at:changed.done?new Date().toISOString():null});if(e)setError(e.message)}}
+  function add(e:FormEvent<HTMLFormElement>){e.preventDefault();const f=new FormData(e.currentTarget);const item={id:crypto.randomUUID(),title:String(f.get("title")),date:String(f.get("date")),period:String(f.get("period")),done:false};void persist([...items,item],item);e.currentTarget.reset()}
+  return <div className="px-4 py-8 md:px-8">
+    <h1 className="text-3xl font-bold text-ink">Everyday activity</h1><p className="pt-1 text-sm text-muted">{school?.name} · plan routines, complete tasks, and retain behaviour context.</p>
+    {isDemo&&<p className="mt-4 rounded-lg bg-amber-50 px-4 py-2 text-xs text-amber-800">Demo activities are isolated to this school and browser.</p>}{error&&<p role="alert" className="mt-4 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+    <form onSubmit={add} className="mt-6 grid gap-3 rounded-xl border border-line bg-white p-4 sm:grid-cols-[1fr_160px_150px_auto]">
+      <input required name="title" placeholder="Plan an everyday activity" className="h-11 rounded-lg border border-line px-3"/><input required name="date" type="date" defaultValue={today()} className="h-11 rounded-lg border border-line px-3"/><input required name="period" placeholder="e.g. 10:30 AM" className="h-11 rounded-lg border border-line px-3"/><button className="rounded-lg bg-brand px-5 font-semibold text-white">Add</button>
+    </form>
+    <section className="mt-5 rounded-xl border border-line bg-white"><h2 className="border-b border-line p-4 font-bold text-ink">Planned activities</h2><ol className="divide-y divide-line">{items.map(item=><li key={item.id} className="flex items-center gap-4 p-4"><button onClick={()=>{const changed={...item,done:!item.done};void persist(items.map(x=>x.id===item.id?changed:x),changed)}} className={`size-8 rounded-full border-2 ${item.done?"border-teal bg-teal text-white":"border-line-strong"}`}>{item.done?"✓":""}</button><div className="flex-1"><p className={`font-semibold text-ink ${item.done?"line-through opacity-50":""}`}>{item.title}</p><p className="text-xs text-muted">{item.date} · {item.period}{item.student?` · ${item.student}`:""}</p></div><button onClick={()=>void persist(items.filter(x=>x.id!==item.id),undefined,item.id)} className="text-sm font-semibold text-red-600">Remove</button></li>)}</ol></section>
+    <section className="mt-6 rounded-xl border border-line bg-white"><h2 className="border-b border-line p-4 font-bold text-ink">Recent behaviour observations</h2>{logs.length?<ol className="divide-y divide-line">{logs.slice(0,5).map(log=><li key={log.id} className="p-4"><Link to={`/app/students/${log.studentId}`} className="font-semibold text-brand">{students.find(s=>s.id===log.studentId)?.full??"Student"}</Link><p className="text-sm text-slate">{log.behaviour} · {log.intensity}</p></li>)}</ol>:<p className="p-6 text-sm text-muted">No observations recorded yet. Planned routines above are ready to use.</p>}</section>
+  </div>;
 }

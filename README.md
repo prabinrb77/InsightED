@@ -214,6 +214,22 @@ calls the `grant_school_admin` RPC, which checks the caller is a super_admin,
 flips the role, optionally attaches them to a school, and writes an
 `audit_log` row. `revoke_school_admin` reverses it.
 
+## Multi-school, messaging, and MFA setup
+
+The checkout intentionally has no `.env.local`, so it runs in labelled browser-only demo mode. To connect a real project:
+
+1. Copy `.env.example` to `.env.local` and set `VITE_SUPABASE_URL` plus either the publishable or legacy anon key from **Supabase Dashboard → Connect**. Never expose a secret/service-role key to Vite.
+2. Apply every SQL file in `supabase/migrations` in filename order (or run `supabase db push` from a linked Supabase CLI project). Migration `0004_multischool_mfa.sql` adds school schedules/activities, soft archive, per-school student-code uniqueness, attachment metadata, participant-only private media policies, and restrictive AAL2 policies.
+3. Optionally run `supabase/seed_demo_schools.sql` to add Harbourview, Banksia Grove, and Rivergum sample tenants. Create users through Auth, then insert their `school_members` rows with the correct school UUID. The browser does not accept a user-supplied school ID.
+4. In **Authentication → Multi-Factor**, keep TOTP challenge/verification enabled. Users signing in with a password must enroll or challenge an authenticator before `/app` opens. Sensitive RLS also checks `auth.jwt()->>'aal' = 'aal2'`, so bypassing the UI does not expose rows.
+5. Add `messages` to the `supabase_realtime` publication if it is not already enabled. The client subscribes to Postgres Changes and refreshes participant-authorized conversations.
+
+The private `message-attachments` bucket accepts supported images and audio up to 10 MB. Object paths start with the conversation UUID; Storage RLS validates that the current AAL2 user is a participant before upload or download. Signed URLs are short-lived and generated only after the same RLS check.
+
+Offline demonstration school logins (all use `P@ssw0rd`) are shown on `/login`: `teacher@harbourview.demo`, `teacher@banksia.demo`, and `teacher@rivergum.demo`. Each has a separate roster and localStorage namespace. Demo MFA is deliberately not simulated and the UI never claims the database is connected.
+
+Security implementation follows Supabase’s current guides for [TOTP MFA](https://supabase.com/docs/guides/auth/auth-mfa/totp), [RLS and AAL claims](https://supabase.com/docs/guides/database/postgres/row-level-security), and [Storage access control](https://supabase.com/docs/guides/storage/security/access-control).
+
 ## Conventions
 
 - **Design tokens live in `tailwind.config.js`.** Colours read out of the Figma file are named there (`ink`, `brand`, `teal`, `body`, `muted`, `line`…). Use the token, not a raw hex.

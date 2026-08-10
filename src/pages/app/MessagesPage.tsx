@@ -58,6 +58,39 @@ export default function MessagesPage() {
   const [showConversation, setShowConversation] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const [recording, setRecording] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState<string | null>(null);
+  const [dictating, setDictating] = useState(false);
+
+  async function toggleRecording() {
+    if (recording) { recorderRef.current?.stop(); return; }
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      setVoiceStatus("Voice recording is not supported by this browser."); return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream); chunksRef.current = [];
+      recorder.ondataavailable = e => { if (e.data.size) chunksRef.current.push(e.data); };
+      recorder.onstop = () => {
+        const type = recorder.mimeType || "audio/webm";
+        const file = new File(chunksRef.current, `voice-note-${Date.now()}.webm`, { type });
+        setAttachment(file); stream.getTracks().forEach(track => track.stop()); setRecording(false); setVoiceStatus("Voice note ready to send.");
+      };
+      recorderRef.current = recorder; recorder.start(); setRecording(true); setVoiceStatus("Recording… select Stop when finished.");
+    } catch { setVoiceStatus("Microphone permission was denied or is unavailable."); }
+  }
+
+  function startDictation() {
+    const SpeechCtor = (window as unknown as { SpeechRecognition?: new()=>any; webkitSpeechRecognition?: new()=>any }).SpeechRecognition ?? (window as unknown as { webkitSpeechRecognition?: new()=>any }).webkitSpeechRecognition;
+    if (!SpeechCtor) { setVoiceStatus("Speech-to-text is not supported by this browser. You can still type or record a voice note."); return; }
+    const recognition = new SpeechCtor(); recognition.lang = navigator.language || "en-AU"; recognition.interimResults = false;
+    recognition.onstart=()=>{setDictating(true);setVoiceStatus("Listening for speech…")};
+    recognition.onresult=(e:any)=>{const text=e.results?.[0]?.[0]?.transcript??"";setDraft(current=>`${current}${current?" ":""}${text}`)};
+    recognition.onerror=(e:any)=>setVoiceStatus(e.error==="not-allowed"?"Speech recognition permission was denied.":"Speech recognition could not complete. Please try again.");
+    recognition.onend=()=>{setDictating(false);}; recognition.start();
+  }
 
   useEffect(() => {
     if (!attachment) {
@@ -314,7 +347,10 @@ export default function MessagesPage() {
                               message.pending ? "opacity-70" : "",
                             ].join(" ")}
                           >
-                            {message.attachmentUrl && (
+                            {message.attachmentUrl && message.attachmentMime?.startsWith("audio/") && (
+                              <div className="bg-white p-3"><audio controls preload="metadata" src={message.attachmentUrl} className="max-w-full">Voice note playback is unsupported.</audio><p className="mt-1 text-xs text-muted">{message.attachmentName}</p></div>
+                            )}
+                            {message.attachmentUrl && !message.attachmentMime?.startsWith("audio/") && (
                               <a
                                 href={message.attachmentUrl}
                                 target="_blank"
@@ -349,10 +385,10 @@ export default function MessagesPage() {
               <form onSubmit={handleSend} className="shrink-0 border-t border-line bg-white px-4 py-4 md:px-6">
                 {attachmentPreview && (
                   <div className="mx-auto mb-3 flex max-w-3xl items-center gap-3 rounded-xl border border-line bg-mist p-2">
-                    <img src={attachmentPreview} alt="Photo ready to send" className="size-16 rounded-lg object-cover" />
+                    {attachment?.type.startsWith("audio/") ? <audio controls src={attachmentPreview} className="h-10 max-w-48" /> : <img src={attachmentPreview} alt="Attachment ready to send" className="size-16 rounded-lg object-cover" />}
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-ink">{attachment?.name}</p>
-                      <p className="text-xs text-muted">Ready to send</p>
+                      <p className="text-xs text-muted">{attachment?.type || "Attachment"} · {attachment ? Math.ceil(attachment.size/1024) : 0} KB</p>
                     </div>
                     <button type="button" onClick={() => setAttachment(null)} className="flex size-9 items-center justify-center rounded-lg text-xl text-muted hover:bg-white" aria-label="Remove attached photo">
                       ×
@@ -363,13 +399,13 @@ export default function MessagesPage() {
                   <input
                     ref={fileRef}
                     type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    accept="image/jpeg,image/png,image/webp,image/gif,audio/webm,audio/ogg,audio/mp4,audio/mpeg,audio/wav"
                     className="sr-only"
                     onChange={(event) => {
                       const file = event.target.files?.[0] ?? null;
-                      if (file && file.size > 5 * 1024 * 1024) {
+                      if (file && file.size > 10 * 1024 * 1024) {
                         event.target.value = "";
-                        window.alert("Please choose an image smaller than 5 MB.");
+                        window.alert("Please choose an attachment smaller than 10 MB.");
                         return;
                       }
                       setAttachment(file);
@@ -378,6 +414,8 @@ export default function MessagesPage() {
                   <button type="button" onClick={() => fileRef.current?.click()} className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-line bg-white text-xl text-brand hover:bg-mist" aria-label="Attach a photo" title="Attach a photo">
                     📷
                   </button>
+                  <button type="button" onClick={()=>void toggleRecording()} className={`flex size-12 shrink-0 items-center justify-center rounded-xl border ${recording?"border-red-500 bg-red-50 text-red-600":"border-line text-brand"}`} aria-label={recording?"Stop voice recording":"Record voice note"}>{recording?"■":"🎙"}</button>
+                  <button type="button" onClick={startDictation} disabled={dictating} className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-line text-brand disabled:opacity-50" aria-label="Dictate message">{dictating?"…":"🗣"}</button>
                   <label className="flex-1">
                     <span className="sr-only">Message</span>
                     <textarea
@@ -401,6 +439,7 @@ export default function MessagesPage() {
                 <p className="mx-auto mt-2 max-w-3xl text-[11px] text-muted">
                   Enter to send · Shift + Enter for a new line
                 </p>
+                {voiceStatus && <p role="status" className="mx-auto mt-1 max-w-3xl text-xs text-muted">{voiceStatus}</p>}
               </form>
             </>
           )}

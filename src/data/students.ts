@@ -10,6 +10,7 @@ export type Student = {
   guardian: string;
   attendance: number;
   trend: "steady" | "improving" | "declining";
+  archivedAt?: string;
 };
 
 export const STUDENTS: Student[] = [
@@ -80,6 +81,20 @@ export const STUDENTS: Student[] = [
     trend: "improving",
   },
 ];
+
+export const SCHOOL_STUDENTS: Record<string, Student[]> = {
+  harbourview: STUDENTS,
+  banksia: [
+    { id: "liam-b", short: "Liam B.", full: "Liam Brooks", code: "4021", studentId: "#BAN-4021", grade: "Year 5", guardian: "Grace Brooks (Mother)", attendance: 91, trend: "improving" },
+    { id: "zara-k", short: "Zara K.", full: "Zara Khan", code: "4022", studentId: "#BAN-4022", grade: "Year 5", guardian: "Imran Khan (Father)", attendance: 87, trend: "steady" },
+    { id: "oscar-t", short: "Oscar T.", full: "Oscar Tan", code: "4023", studentId: "#BAN-4023", grade: "Year 6", guardian: "Mei Tan (Mother)", attendance: 96, trend: "improving" },
+  ],
+  rivergum: [
+    { id: "evie-c", short: "Evie C.", full: "Evie Campbell", code: "4021", studentId: "#RIV-4021", grade: "Year 7", guardian: "Ian Campbell (Father)", attendance: 89, trend: "steady" },
+    { id: "aiden-n", short: "Aiden N.", full: "Aiden Nguyen", code: "4022", studentId: "#RIV-4022", grade: "Year 8", guardian: "Linh Nguyen (Mother)", attendance: 93, trend: "improving" },
+    { id: "ruby-s", short: "Ruby S.", full: "Ruby Singh", code: "4023", studentId: "#RIV-4023", grade: "Year 7", guardian: "Kiran Singh (Guardian)", attendance: 84, trend: "declining" },
+  ],
+};
 
 export function findStudent(id: string) {
   return STUDENTS.find((s) => s.id === id);

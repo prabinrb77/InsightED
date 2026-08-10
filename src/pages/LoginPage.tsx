@@ -8,8 +8,10 @@ import {
   DEMO_ACCOUNTS,
   DEMO_PASSWORD,
   findDemoAccount,
+  homeForRole,
   setDemoSession,
 } from "../lib/demoAccounts";
+import TotpMfa from "../components/TotpMfa";
 
 /** Figma: node 1:198 "Login Page" */
 
@@ -22,6 +24,8 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [pendingHome, setPendingHome] = useState("/app");
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -53,9 +57,8 @@ export default function LoginPage() {
       return;
     }
 
-    // Everyone lands on the homepage — a parent or specialist has no business
-    // in the educator dashboard. The one exception is the super admin console,
-    // which is the only area with no other entry point.
+    // Sign-in is shared by every account. The profile role determines which
+    // workspace is appropriate after authentication.
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
@@ -63,13 +66,14 @@ export default function LoginPage() {
       .maybeSingle();
 
     setBusy(false);
-    navigate(profile?.role === "super_admin" ? "/admin" : "/");
+    setPendingHome(homeForRole(profile?.role));
+    setMfaRequired(true);
   }
 
   async function handleProvider(provider: "google" | "microsoft") {
     setNotice({
       kind: "info",
-      text: `For privacy, educator access currently uses the approved email and password only. ${provider === "google" ? "Google" : "Microsoft"} sign-in is disabled.`,
+      text: `${provider === "google" ? "Google" : "Microsoft"} sign-in is not connected yet. Please use your InsightED email and password.`,
     });
   }
 
@@ -85,7 +89,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6 pt-8">
+        {mfaRequired ? <div className="pt-8"><TotpMfa onVerified={()=>navigate(pendingHome)}/><button type="button" onClick={()=>{void supabase?.auth.signOut();setMfaRequired(false)}} className="mt-4 w-full text-sm font-semibold text-muted">Cancel sign-in</button></div> : <form onSubmit={handleSubmit} className="flex flex-col gap-6 pt-8">
           <div className="flex flex-col gap-2">
             <label
               htmlFor="email"
@@ -175,11 +179,11 @@ export default function LoginPage() {
             disabled={busy}
             className="flex h-12 w-full items-center justify-center rounded-lg bg-brand text-base font-bold text-white transition-colors hover:bg-[#255d99] disabled:opacity-60"
           >
-            {busy ? "Signing in…" : "Login"}
+            {busy ? "Signing in…" : "Sign in"}
           </button>
-        </form>
+        </form>}
 
-        <div className="relative flex items-center justify-center py-8">
+        {!mfaRequired && <><div className="relative flex items-center justify-center py-8">
           <span aria-hidden className="absolute inset-x-0 h-px bg-line" />
           <span className="relative bg-white px-4 text-sm font-medium uppercase leading-[21px] tracking-[0.7px] text-slate">
             or continue with
@@ -214,7 +218,7 @@ export default function LoginPage() {
 
         {/* Only rendered with no backend attached, so it can't leak into a
             deployment that has real accounts behind it. */}
-        {!supabase && <DemoAccountHint onPick={setEmail} />}
+        {!supabase && <DemoAccountHint onPick={setEmail} />}</>}
       </div>
     </AuthLayout>
   );

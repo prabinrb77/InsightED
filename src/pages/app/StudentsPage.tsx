@@ -3,7 +3,9 @@ import { Link, useSearchParams } from "react-router-dom";
 import Avatar from "../../components/Avatar";
 import BehaviourLogModal from "../../components/BehaviourLogModal";
 import type { Student } from "../../data/students";
-import { downloadStudentsCsv, getStudents } from "../../lib/educatorStore";
+import { downloadStudentsCsv } from "../../lib/educatorStore";
+import useStudents from "../../hooks/useStudents";
+import useCurrentSchool from "../../hooks/useCurrentSchool";
 
 /** Figma: node 1:1370 "Student Directory" */
 
@@ -11,7 +13,8 @@ export default function StudentsPage() {
   const [searchParams] = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("search") ?? "");
   const [logging, setLogging] = useState<Student | null>(null);
-  const students = getStudents();
+  const { students, archive, error, isDemo } = useStudents();
+  const { school } = useCurrentSchool();
   const rows = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return needle
@@ -32,7 +35,7 @@ export default function StudentsPage() {
             Student Directory
           </h1>
           <p className="pt-1 text-[15px] leading-6 text-muted">
-            {students.length} Total Students
+            {school?.name ?? "No school assigned"} · {students.length} active students
           </p>
         </div>
 
@@ -54,6 +57,8 @@ export default function StudentsPage() {
           </Link>
         </div>
       </div>
+      {isDemo && <p className="mt-3 rounded-lg bg-amber-50 px-4 py-2 text-xs text-amber-800">Demo roster — stored only in this browser and isolated to this school login.</p>}
+      {error && <p role="alert" className="mt-3 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>}
 
       <label className="mt-6 block max-w-md">
         <span className="sr-only">Search the student directory</span>
@@ -134,6 +139,11 @@ export default function StudentsPage() {
                       className="flex h-9 items-center rounded-lg border border-brand bg-white px-4 text-sm font-semibold text-brand transition-colors hover:bg-mist"
                     >
                       Quick Log
+                    </button>
+                    <button type="button" onClick={() => {
+                      if (window.confirm(`Archive ${s.full}? Their historical records will be retained.`)) void archive(s.id);
+                    }} className="flex h-9 items-center rounded-lg border border-red-200 px-3 text-sm font-semibold text-red-600 hover:bg-red-50">
+                      Archive
                     </button>
                   </span>
                 </td>

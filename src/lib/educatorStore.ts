@@ -1,4 +1,5 @@
-import { STUDENTS, type Student } from "../data/students";
+import { SCHOOL_STUDENTS, STUDENTS, type Student } from "../data/students";
+import { getDemoSession } from "./demoAccounts";
 
 export type BehaviourLog = {
   id: string;
@@ -23,7 +24,9 @@ function read<T>(key: string, fallback: T): T {
 }
 
 export function getStudents(): Student[] {
-  return read<Student[]>(STUDENTS_KEY, STUDENTS);
+  const schoolId = getDemoSession()?.school?.id ?? "harbourview";
+  return read<Student[]>(`${STUDENTS_KEY}.${schoolId}`, SCHOOL_STUDENTS[schoolId] ?? STUDENTS)
+    .filter((student) => !student.archivedAt);
 }
 
 export function addStudent(input: {
@@ -49,8 +52,16 @@ export function addStudent(input: {
     attendance: 100,
     trend: "steady",
   };
-  localStorage.setItem(STUDENTS_KEY, JSON.stringify([...students, student]));
+  const schoolId = getDemoSession()?.school?.id ?? "harbourview";
+  localStorage.setItem(`${STUDENTS_KEY}.${schoolId}`, JSON.stringify([...students, student]));
   return student;
+}
+
+export function archiveStudent(id: string) {
+  const schoolId = getDemoSession()?.school?.id ?? "harbourview";
+  const students = read<Student[]>(`${STUDENTS_KEY}.${schoolId}`, SCHOOL_STUDENTS[schoolId] ?? STUDENTS);
+  localStorage.setItem(`${STUDENTS_KEY}.${schoolId}`, JSON.stringify(students.map((student) =>
+    student.id === id ? { ...student, archivedAt: new Date().toISOString() } : student)));
 }
 
 export function getBehaviourLogs(): BehaviourLog[] {

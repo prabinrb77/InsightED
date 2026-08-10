@@ -1,22 +1,9 @@
 import { FormEvent, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import useScheduleEvents, { type ScheduleCategory, type ScheduleEvent } from "../../hooks/useScheduleEvents";
 
-type View = "Day" | "Week" | "Month";
-type Category = "Class" | "Support" | "Meeting" | "Personal";
-
-type ScheduleEvent = {
-  id: string;
-  title: string;
-  date: string;
-  start: string;
-  end: string;
-  category: Category;
-  student?: string;
-  notes?: string;
-  done: boolean;
-};
-
-const STORAGE_KEY = "mizanova-educator-schedule-v1";
+type View = "Day" | "Week" | "Month" | "Agenda";
+type Category = ScheduleCategory;
 
 function dateKey(date: Date) {
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
@@ -37,26 +24,6 @@ function addDays(date: Date, amount: number) {
   return result;
 }
 
-function seedEvents(): ScheduleEvent[] {
-  const today = dateKey(new Date());
-  return [
-    { id: "homeroom", title: "Morning Homeroom – Grade 4", date: today, start: "08:15", end: "08:45", category: "Class", done: true },
-    { id: "math", title: "Math Workshop: Fractions", date: today, start: "09:00", end: "10:00", category: "Class", done: false },
-    { id: "speech", title: "Speech Therapy", date: today, start: "10:00", end: "11:00", category: "Support", student: "Leo Marsh", done: false },
-    { id: "iep", title: "IEP Review", date: today, start: "11:30", end: "12:15", category: "Meeting", student: "Maya Reid", done: false },
-    { id: "reading", title: "Guided Reading: Group B", date: today, start: "13:00", end: "14:00", category: "Class", done: false },
-  ];
-}
-
-function loadEvents() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? (JSON.parse(saved) as ScheduleEvent[]) : seedEvents();
-  } catch {
-    return seedEvents();
-  }
-}
-
 const TONES: Record<Category, string> = {
   Class: "border-l-brand bg-[#EFF6FF]",
   Support: "border-l-[#7C3AED] bg-[#F5F3FF]",
@@ -67,13 +34,8 @@ const TONES: Record<Category, string> = {
 export default function SchedulePage() {
   const [view, setView] = useState<View>("Day");
   const [selectedDate, setSelectedDate] = useState(() => new Date());
-  const [events, setEvents] = useState<ScheduleEvent[]>(loadEvents);
+  const { events, save, error, isDemo, school } = useScheduleEvents();
   const [showForm, setShowForm] = useState(false);
-
-  function persist(next: ScheduleEvent[]) {
-    setEvents(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  }
 
   const visibleEvents = useMemo(() => {
     const selected = dateKey(selectedDate);
@@ -81,6 +43,7 @@ export default function SchedulePage() {
     return events
       .filter((event) => {
         const eventDate = new Date(`${event.date}T12:00:00`);
+        if (view === "Agenda") return event.date >= selected;
         if (view === "Day") return event.date === selected;
         if (view === "Week") {
           return eventDate >= weekStart && eventDate < addDays(weekStart, 7);
@@ -106,15 +69,19 @@ export default function SchedulePage() {
     if (view === "Day") next.setDate(next.getDate() + direction);
     if (view === "Week") next.setDate(next.getDate() + direction * 7);
     if (view === "Month") next.setMonth(next.getMonth() + direction);
+    if (view === "Agenda") next.setDate(next.getDate() + direction * 7);
     setSelectedDate(next);
   }
 
   function toggleDone(id: string) {
-    persist(events.map((event) => event.id === id ? { ...event, done: !event.done } : event));
+    const changed = events.find((event) => event.id === id);
+    if (!changed) return;
+    const updated = { ...changed, done: !changed.done };
+    void save(events.map((event) => event.id === id ? updated : event), updated);
   }
 
   function removeEvent(id: string) {
-    persist(events.filter((event) => event.id !== id));
+    void save(events.filter((event) => event.id !== id), undefined, id);
   }
 
   function addEvent(event: FormEvent<HTMLFormElement>) {
@@ -132,7 +99,7 @@ export default function SchedulePage() {
       done: false,
     };
     if (!next.title || !next.date || !next.start || !next.end) return;
-    persist([...events, next]);
+    void save([...events, next], next);
     setSelectedDate(new Date(`${next.date}T12:00:00`));
     setShowForm(false);
   }
@@ -142,6 +109,7 @@ export default function SchedulePage() {
       ? selectedDate.toLocaleDateString([], { month: "long", year: "numeric" })
       : view === "Week"
         ? `Week of ${startOfWeek(selectedDate).toLocaleDateString([], { month: "short", day: "numeric" })}`
+        : view === "Agenda" ? `Everyday plan from ${selectedDate.toLocaleDateString([], { month: "long", day: "numeric" })}`
         : selectedDate.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric", year: "numeric" });
   const completed = visibleEvents.filter((event) => event.done).length;
   const students = new Set(visibleEvents.map((event) => event.student).filter(Boolean)).size;
@@ -151,7 +119,7 @@ export default function SchedulePage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-[-0.5px] text-ink">Schedule</h1>
-          <p className="pt-1 text-[15px] text-muted">{heading}</p>
+          <p className="pt-1 text-[15px] text-muted">{school?.name ?? "No school assigned"} · {heading}</p>
         </div>
         <button type="button" onClick={() => setShowForm(true)} className="h-11 rounded-lg bg-brand px-5 text-sm font-semibold text-white hover:bg-[#255d99]">
           + Add event
@@ -165,7 +133,7 @@ export default function SchedulePage() {
           <button type="button" onClick={() => move(1)} aria-label={`Next ${view.toLowerCase()}`} className="size-9 rounded-lg border border-line text-xl text-ink hover:bg-mist">›</button>
         </div>
         <div role="tablist" aria-label="Calendar range" className="flex rounded-lg bg-mist p-1">
-          {(["Day", "Week", "Month"] as const).map((value) => (
+          {(["Day", "Week", "Month", "Agenda"] as const).map((value) => (
             <button key={value} role="tab" aria-selected={view === value} onClick={() => setView(value)} className={`rounded-md px-4 py-1.5 text-sm font-semibold ${view === value ? "bg-white text-ink shadow-btn" : "text-muted"}`}>
               {value}
             </button>
@@ -173,7 +141,10 @@ export default function SchedulePage() {
         </div>
       </div>
 
-      <div className="mt-5 space-y-4">
+      {isDemo && <p className="mt-4 rounded-lg bg-amber-50 px-4 py-2 text-xs text-amber-800">Demo schedule — changes stay in this browser. Configure Supabase to sync this school.</p>}
+      {error && <p role="alert" className="mt-4 rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">Schedule sync failed: {error}</p>}
+
+      <div className={`mt-5 ${view === "Week" ? "grid gap-3 lg:grid-cols-7" : view === "Month" ? "grid gap-2 sm:grid-cols-2 lg:grid-cols-4" : "space-y-4"}`}>
         {grouped.length === 0 ? (
           <div className="rounded-xl border border-dashed border-line bg-white px-6 py-16 text-center">
             <p className="font-semibold text-ink">Nothing scheduled</p>
@@ -181,17 +152,17 @@ export default function SchedulePage() {
             <button type="button" onClick={() => setShowForm(true)} className="mt-4 text-sm font-semibold text-brand hover:underline">Add the first event</button>
           </div>
         ) : grouped.map(([date, dayEvents]) => (
-          <section key={date} className="overflow-hidden rounded-xl border border-line bg-white">
+          <section key={date} className={`overflow-hidden rounded-xl border border-line bg-white ${view === "Day" ? "shadow-sm" : ""}`}>
             <h2 className="border-b border-line bg-mist px-5 py-3 text-sm font-bold text-ink">
               {new Date(`${date}T12:00:00`).toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" })}
             </h2>
-            <ol className="divide-y divide-line">
+            <ol className={`divide-y divide-line ${view === "Month" ? "min-h-32" : ""}`}>
               {dayEvents.map((event) => (
-                <li key={event.id} className={`flex flex-wrap items-center gap-4 border-l-4 px-5 py-4 ${TONES[event.category]}`}>
+                <li key={event.id} className={`flex flex-wrap items-center gap-4 border-l-4 ${view === "Week" || view === "Month" ? "px-3 py-3" : "px-5 py-4"} ${TONES[event.category]}`}>
                   <button type="button" onClick={() => toggleDone(event.id)} aria-label={event.done ? "Mark incomplete" : "Mark complete"} className={`flex size-7 items-center justify-center rounded-full border-2 ${event.done ? "border-brand bg-brand text-white" : "border-line-strong bg-white"}`}>
                     {event.done ? "✓" : ""}
                   </button>
-                  <div className="w-28 shrink-0">
+                  <div className={`${view === "Day" || view === "Agenda" ? "w-28" : "w-full"} shrink-0`}>
                     <p className="text-sm font-bold text-ink">{event.start}</p>
                     <p className="text-xs text-muted">to {event.end}</p>
                   </div>
@@ -200,7 +171,7 @@ export default function SchedulePage() {
                     <p className="mt-0.5 text-xs text-muted">{event.category}{event.student ? ` · ${event.student}` : ""}</p>
                     {event.notes && <p className="mt-1 text-xs text-slate">{event.notes}</p>}
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className={`${view === "Day" || view === "Agenda" ? "flex" : "hidden"} items-center gap-3`}>
                     {event.student && <Link to="/app/messages" className="text-sm font-semibold text-brand hover:underline">Message</Link>}
                     <button type="button" onClick={() => removeEvent(event.id)} className="text-sm font-semibold text-red-600 hover:underline">Delete</button>
                   </div>

@@ -2,6 +2,7 @@ import useSession from "../../hooks/useSession";
 import { supabase } from "../../lib/supabase";
 import Avatar from "../../components/Avatar";
 import { useNavigate } from "react-router-dom";
+import TotpMfa from "../../components/TotpMfa";
 
 /**
  * Educator settings. The Figma file has settings frames for the parent,
@@ -26,6 +27,11 @@ export default function AppSettingsPage() {
       </p>
 
       <div className="mx-auto flex max-w-[720px] flex-col gap-6 pt-6">
+        <section className="rounded-xl border border-line bg-white p-6">
+          <h2 className="text-sm font-bold text-ink">Authenticator security</h2>
+          <div className="pt-4"><TotpMfa management /></div>
+        </section>
+
         <section className="rounded-xl border border-line bg-white p-6">
           <h2 className="text-sm font-bold text-ink">Profile</h2>
           <div className="flex flex-wrap items-center gap-4 pt-4">

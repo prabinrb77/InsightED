@@ -1,8 +1,9 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import useProfile, { UserRole, heldRoles } from "../hooks/useProfile";
 import { supabase } from "../lib/supabase";
 import { getDemoSession } from "../lib/demoAccounts";
+import TotpMfa from "./TotpMfa";
 
 /**
  * Route guard for role-restricted areas.
@@ -42,6 +43,14 @@ export default function RequireRole({
   if (!heldRoles(profile).some((r) => allow.includes(r))) {
     return <Navigate to="/app" replace />;
   }
+  return <Aal2Gate>{children}</Aal2Gate>;
+}
+
+function Aal2Gate({children}:{children:ReactNode}) {
+  const [aal2,setAal2]=useState<boolean|null>(null);
+  useEffect(()=>{supabase?.auth.mfa.getAuthenticatorAssuranceLevel().then(({data})=>setAal2(data?.currentLevel==="aal2"))},[]);
+  if(aal2===null)return <GuardSplash/>;
+  if(!aal2)return <div className="flex min-h-screen items-center justify-center bg-page p-4"><div className="w-full max-w-md rounded-xl border border-line bg-white p-8"><h1 className="mb-2 text-2xl font-bold text-ink">Authenticator verification required</h1><p className="mb-6 text-sm text-muted">School records are protected until this session reaches AAL2.</p><TotpMfa onVerified={()=>setAal2(true)}/></div></div>;
   return <>{children}</>;
 }
 
